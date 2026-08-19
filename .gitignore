@@ -1,0 +1,8 @@
+﻿.env
+.env.*
+!.env.example
+node_modules/
+vendor/
+*.zip
+*.rar
+*.7z
