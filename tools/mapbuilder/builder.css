@@ -1,0 +1,493 @@
+/* ==========================================================
+   PORTAL DKK
+   MAP BUILDER v1.0
+==========================================================*/
+
+:root{
+
+    --primary:#00BCD4;
+    --primary2:#00E5FF;
+    --bg:#071626;
+    --bg2:#0B2239;
+    --panel:#112B45;
+    --glass:rgba(255,255,255,.06);
+    --border:rgba(255,255,255,.15);
+    --text:#ffffff;
+    --text2:#bfcad6;
+
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,
+body{
+
+    width:100%;
+    height:100%;
+
+    background:linear-gradient(180deg,#05111d,#0b2239);
+
+    color:var(--text);
+
+    font-family:
+        "Segoe UI",
+        Tahoma,
+        sans-serif;
+
+}
+
+/* =======================================================
+   HEADER
+=======================================================*/
+
+header{
+
+    height:70px;
+
+    display:flex;
+
+    align-items:center;
+
+    padding:0 25px;
+
+    background:rgba(0,0,0,.25);
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+header h1{
+
+    font-size:26px;
+
+    font-weight:600;
+
+}
+
+header span{
+
+    display:block;
+
+    margin-top:4px;
+
+    color:#b5c5d6;
+
+    font-size:13px;
+
+}
+
+/* =======================================================
+   CONTENT
+=======================================================*/
+
+.wrapper{
+
+    width:100%;
+
+    height:calc(100vh - 70px);
+
+}
+
+main{
+
+    display:flex;
+
+    gap:20px;
+
+    padding:20px;
+
+    height:100%;
+
+}
+
+/* =======================================================
+   MAP PANEL
+=======================================================*/
+
+.map-panel{
+
+    flex:1;
+
+    background:var(--glass);
+
+    border:1px solid var(--border);
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+    backdrop-filter:blur(15px);
+
+}
+
+.panel-title{
+
+    padding:15px 20px;
+
+    background:rgba(255,255,255,.05);
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+    font-size:16px;
+
+    font-weight:600;
+
+}
+
+#svgContainer{
+
+    width:100%;
+
+    height:calc(100% - 55px);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    padding:25px;
+
+}
+
+/* =======================================================
+   SVG
+=======================================================*/
+
+#svgContainer svg{
+
+    width:100%;
+
+    height:100%;
+
+}
+
+#svgContainer path{
+
+    fill:#2b6d9c;
+
+    stroke:#d6f6ff;
+
+    stroke-width:1;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+}
+
+#svgContainer path:hover{
+
+    fill:#00BCD4;
+
+    filter:drop-shadow(0 0 8px #00FFFF);
+
+}
+
+#svgContainer path.active{
+
+    fill:#00E5FF !important;
+
+    filter:drop-shadow(0 0 12px cyan);
+
+}
+
+/* =======================================================
+   PROPERTY PANEL
+=======================================================*/
+
+.property-panel{
+
+    width:360px;
+
+    background:var(--glass);
+
+    border:1px solid var(--border);
+
+    border-radius:20px;
+
+    backdrop-filter:blur(15px);
+
+    display:flex;
+
+    flex-direction:column;
+
+    overflow:hidden;
+
+}
+
+.property-panel table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin:20px;
+
+}
+
+.property-panel td{
+
+    padding:10px;
+
+    vertical-align:middle;
+
+}
+
+.property-panel input{
+
+    width:100%;
+
+    padding:10px 12px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#17324d;
+
+    color:white;
+
+    outline:none;
+
+}
+
+.property-panel input:focus{
+
+    border:1px solid var(--primary);
+
+}
+
+/* =======================================================
+   BUTTON
+=======================================================*/
+
+.button-group{
+
+    display:flex;
+
+    gap:10px;
+
+    margin:20px;
+
+}
+
+.button-group button{
+
+    flex:1;
+
+    padding:12px;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-weight:600;
+
+    transition:.25s;
+
+}
+
+#btnSave{
+
+    background:#00BCD4;
+
+    color:#072033;
+
+}
+
+#btnExport{
+
+    background:#29B6F6;
+
+    color:white;
+
+}
+
+.button-group button:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:0 5px 15px rgba(0,255,255,.25);
+
+}
+
+/* =======================================================
+   DISTRICT LIST
+=======================================================*/
+
+#districtList{
+
+    flex:1;
+
+    overflow:auto;
+
+    padding:15px;
+
+}
+
+.district-item{
+
+    padding:12px;
+
+    margin-bottom:8px;
+
+    border-radius:10px;
+
+    background:rgba(255,255,255,.05);
+
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+.district-item:hover{
+
+    background:#00BCD4;
+
+    color:#082033;
+
+}
+
+/* =======================================================
+   STATUS BAR
+=======================================================*/
+
+footer{
+
+    position:fixed;
+
+    left:0;
+
+    bottom:0;
+
+    width:100%;
+
+    height:36px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:0 20px;
+
+    background:#04101b;
+
+    border-top:1px solid rgba(255,255,255,.08);
+
+    color:#b7c7d5;
+
+    font-size:13px;
+
+}
+
+/* =======================================================
+   SCROLLBAR
+=======================================================*/
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#10253d;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#00BCD4;
+
+    border-radius:20px;
+
+}
+
+/* =======================================================
+   RESPONSIVE
+=======================================================*/
+
+@media(max-width:1200px){
+
+    main{
+
+        flex-direction:column;
+
+    }
+
+    .property-panel{
+
+        width:100%;
+
+        height:380px;
+
+    }
+
+    footer{
+
+        position:relative;
+
+    }
+
+}
+
+#btnReset{
+
+background:#455A64;
+
+color:white;
+
+}
+
+/* ==========================================================
+   PATH NUMBER
+==========================================================*/
+
+#numberLayer{
+
+pointer-events:none;
+
+}
+
+.path-label{
+
+pointer-events:all;
+
+}
+
+.path-label circle{
+
+transition:.25s;
+
+}
+
+.path-label:hover circle{
+
+fill:#00BCD4;
+
+stroke:white;
+
+r:15;
+
+}
+
+.path-label text{
+
+font-weight:bold;
+
+font-family:Segoe UI;
+
+user-select:none;
+
+}

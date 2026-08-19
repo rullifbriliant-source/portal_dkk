@@ -1,0 +1,1593 @@
+/* ==========================================================
+   PORTAL TERPADU DKK SUKOHARJO
+   style_v2.css
+   BAGIAN 1
+========================================================== */
+
+:root{
+
+    --primary:#061426;
+    --secondary:#0b2343;
+    --accent:#00d4ff;
+
+    --white:#ffffff;
+
+    --glass:rgba(255,255,255,.08);
+    --glass2:rgba(255,255,255,.12);
+
+    --border:rgba(255,255,255,.16);
+
+    --shadow:
+        0 12px 35px rgba(0,0,0,.35);
+
+}
+
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+
+}
+
+html,
+body{
+
+    width:100%;
+    height:100%;
+    overflow:hidden;
+
+    font-family:'Poppins',sans-serif;
+    color:white;
+
+    background:#051321;
+
+}
+
+/* ==========================================================
+BACKGROUND
+========================================================== */
+
+.video-container{
+
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    z-index:-5;
+
+}
+
+.video-container video{
+
+    width:100%;
+    height:100%;
+    object-fit:cover;
+
+    filter:
+        brightness(.35)
+        saturate(1.15);
+
+}
+
+.overlay-dark{
+
+    position:fixed;
+    inset:0;
+
+    background:
+    linear-gradient(
+        180deg,
+        rgba(3,16,32,.20),
+        rgba(3,16,32,.82)
+    );
+
+    z-index:-4;
+
+}
+
+.grid-effect{
+
+    position:fixed;
+    inset:0;
+
+    z-index:-3;
+
+    opacity:.18;
+
+    background-image:
+
+        linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+
+    background-size:40px 40px;
+
+}
+
+/* ==========================================================
+LAYOUT
+========================================================== */
+
+.landing-page{
+
+    width:100%;
+    height:100vh;
+
+    display:flex;
+    flex-direction:column;
+
+    padding:20px 28px 24px;
+
+}
+
+/* ==========================================================
+HEADER
+========================================================== */
+
+.top-header{
+
+    width:100%;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:18px;
+
+    z-index:100;
+
+}
+
+/* ==========================================================
+JUDUL
+========================================================== */
+
+.header-title{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+
+}
+
+.portal-title{
+
+    line-height:1.15;
+
+}
+
+.small-title{
+
+    font-size:11px;
+
+    color:#8fdcff;
+
+    letter-spacing:2px;
+
+    text-transform:uppercase;
+
+}
+
+.portal-title h1{
+
+    font-size:38px;
+
+    font-weight:700;
+
+    margin-top:5px;
+
+}
+
+.portal-title h2{
+
+    font-size:17px;
+
+    color:#79dcff;
+
+    font-weight:500;
+
+    margin-top:4px;
+
+}
+
+/* ==========================================================
+LIVE INFO
+========================================================== */
+
+.live-info{
+
+    width:100%;
+
+    height:62px;
+
+    display:grid;
+
+    grid-template-columns:
+
+        1fr
+        1fr
+        1fr;
+
+    gap:18px;
+
+}
+
+/* ==========================================================
+KARTU
+========================================================== */
+
+.info-card{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:12px;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.15);
+
+    box-shadow:0 10px 25px rgba(0,0,0,.18);
+
+}
+
+.info-card i{
+
+    color:#00d4ff;
+
+    font-size:18px;
+
+}
+
+.info-card span{
+
+    font-size:15px;
+
+    font-weight:500;
+
+}
+
+/* ==========================================================
+JAM
+========================================================== */
+
+#clock{
+
+    font-size:46px;
+
+    font-weight:700;
+
+    letter-spacing:3px;
+
+    text-align:center;
+
+    text-shadow:
+
+        0 0 18px rgba(0,212,255,.45);
+
+}
+
+/* ==========================================================
+CUACA
+========================================================== */
+
+.weather-box{
+
+    display:flex;
+
+    justify-content:flex-end;
+
+    align-items:center;
+
+    gap:10px;
+
+}
+
+.weather-box i{
+
+    color:#ffd54f;
+
+}
+
+.weather-box span{
+
+    font-size:15px;
+
+}
+
+/* ==========================================================
+   BAGIAN 2
+   MAIN LAYOUT
+========================================================== */
+
+.main-content{
+
+    flex:1;
+
+    margin-top:22px;
+
+    display:grid;
+
+    grid-template-columns:
+        340px
+        1fr
+        340px;
+
+    gap:26px;
+
+    align-items:center;
+
+    min-height:0;
+
+}
+
+/* ==========================================================
+LEFT PANEL
+========================================================== */
+
+.left-panel,
+.right-panel{
+
+    height:100%;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:18px;
+
+    z-index:20;
+
+}
+
+.glass-card{
+
+    width:100%;
+
+    border-radius:24px;
+
+    padding:24px;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.14);
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,.25);
+
+}
+
+.glass-card h4{
+
+    margin-bottom:18px;
+
+    font-size:22px;
+
+    color:#84e7ff;
+
+}
+
+.glass-card p{
+
+    font-size:15px;
+
+    line-height:1.8;
+
+    color:#d7efff;
+
+}
+
+.portal-feature{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:14px;
+
+    margin-top:18px;
+
+}
+
+.portal-feature div{
+
+    padding:16px;
+
+    border-radius:16px;
+
+    background:rgba(255,255,255,.05);
+
+    transition:.30s;
+
+    cursor:pointer;
+
+    text-align:center;
+
+}
+
+.portal-feature div:hover{
+
+    background:rgba(0,212,255,.18);
+
+    transform:translateY(-5px);
+
+}
+
+/* ==========================================================
+CENTER AREA
+========================================================== */
+
+.center-panel{
+
+    position:relative;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    height:100%;
+
+    overflow:visible;
+
+}
+
+/* ==========================================================
+MAP CONTAINER
+========================================================== */
+
+#map-container{
+
+    position:relative;
+
+    width:100%;
+
+    height:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:transparent;
+
+}
+
+/* ==========================================================
+MAP STAGE
+========================================================== */
+
+.map-stage{
+
+    position:relative;
+
+    width:900px;
+
+    height:900px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:transparent;
+
+    border:none;
+
+    box-shadow:none;
+
+    overflow:visible;
+
+}
+
+/* ==========================================================
+SVG MAP
+========================================================== */
+
+#svgMap{
+
+    width:100%;
+
+    height:100%;
+
+    position:relative;
+
+    z-index:20;
+
+    background:transparent;
+
+    pointer-events:auto;
+
+    filter:
+        drop-shadow(0 0 20px rgba(0,212,255,.35));
+
+}
+
+/* ==========================================================
+BACKGROUND EFFECT
+========================================================== */
+
+.map-grid{
+
+    position:absolute;
+
+    width:640px;
+
+    height:640px;
+
+    border-radius:50%;
+
+    border:1px solid rgba(0,212,255,.10);
+
+    pointer-events:none;
+
+    z-index:1;
+
+}
+
+.map-glow{
+
+    position:absolute;
+
+    width:480px;
+
+    height:480px;
+
+    border-radius:50%;
+
+    background:
+
+        radial-gradient(
+
+            rgba(0,212,255,.30),
+
+            transparent 70%
+
+        );
+
+    filter:blur(45px);
+
+    pointer-events:none;
+
+    z-index:2;
+
+}
+
+/* ==========================================================
+HOLOGRAM FLOOR
+========================================================== */
+
+.holo-floor{
+
+    position:absolute;
+
+    bottom:70px;
+
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:700px;
+
+    height:220px;
+
+    pointer-events:none;
+
+    z-index:1;
+
+}
+
+/* ==========================================================
+RADAR
+========================================================== */
+
+.radar{
+
+    position:absolute;
+
+    border-radius:50%;
+
+    border:1px solid rgba(0,212,255,.18);
+
+    pointer-events:none;
+
+}
+
+.radar1{
+
+    width:280px;
+    height:280px;
+
+}
+
+.radar2{
+
+    width:430px;
+    height:430px;
+
+}
+
+.radar3{
+
+    width:590px;
+    height:590px;
+
+}
+
+/* ==========================================================
+RIGHT PANEL
+========================================================== */
+
+.info-panel table{
+
+    width:100%;
+
+    color:white;
+
+}
+
+.info-panel td{
+
+    padding:10px 0;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+.info-panel td:first-child{
+
+    color:#87e3ff;
+
+    width:45%;
+
+}
+
+/* ==========================================================
+   BAGIAN 3
+   ORBIT MENU + LOGO
+========================================================== */
+
+/* Area orbit berada tepat di tengah */
+#orbitMenu{
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:620px;
+    height:620px;
+
+    z-index:30;
+
+    /* Area kosong tidak menghalangi klik peta */
+    pointer-events:none;
+
+}
+
+/* ==========================================================
+LOGO TENGAH
+========================================================== */
+
+.logo-button{
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:170px;
+    height:170px;
+
+    border-radius:50%;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    text-decoration:none;
+
+    background:rgba(10,35,60,.45);
+
+    backdrop-filter:blur(22px);
+
+    border:2px solid rgba(0,212,255,.35);
+
+    box-shadow:
+        0 0 45px rgba(0,212,255,.30);
+
+    z-index:35;
+
+    pointer-events:auto;
+
+    transition:.30s;
+
+}
+
+.logo-button:hover{
+
+    transform:translate(-50%,-50%) scale(1.05);
+
+    box-shadow:
+        0 0 60px rgba(0,212,255,.55);
+
+}
+
+.logo-button img{
+
+    width:95px;
+
+    filter:
+        drop-shadow(0 0 20px rgba(0,212,255,.65));
+
+}
+
+.logo-button small{
+
+    margin-top:10px;
+
+    color:white;
+
+    font-size:12px;
+
+    font-weight:600;
+
+    text-align:center;
+
+}
+
+/* ==========================================================
+ICON MENU
+========================================================== */
+
+.orbit-item{
+
+    position:absolute;
+
+    width:92px;
+    height:92px;
+
+    border-radius:50%;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    text-decoration:none;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.15);
+
+    color:white;
+
+    transition:.30s;
+
+    pointer-events:auto;
+
+    box-shadow:
+        0 8px 25px rgba(0,0,0,.25);
+
+}
+
+.orbit-item:hover{
+
+    transform:scale(1.12);
+
+    background:rgba(0,212,255,.18);
+
+    box-shadow:
+        0 0 35px rgba(0,212,255,.60);
+
+}
+
+.orbit-item i{
+
+    font-size:24px;
+
+    color:#00d4ff;
+
+}
+
+.orbit-item span{
+
+    margin-top:8px;
+
+    font-size:11px;
+
+    text-align:center;
+
+    line-height:1.2;
+
+}
+
+/* ==========================================================
+POSISI ORBIT
+========================================================== */
+
+/* atas */
+.orbit1{
+
+    left:264px;
+    top:0;
+
+}
+
+/* kiri atas */
+.orbit2{
+
+    left:70px;
+    top:95px;
+
+}
+
+/* kanan atas */
+.orbit3{
+
+    right:70px;
+    top:95px;
+
+}
+
+/* kiri bawah */
+.orbit4{
+
+    left:70px;
+    bottom:95px;
+
+}
+
+/* kanan bawah */
+.orbit5{
+
+    right:70px;
+    bottom:95px;
+
+}
+
+/* bawah */
+.orbit6{
+
+    left:264px;
+    bottom:0;
+
+}
+
+/* ==========================================================
+RING ORBIT
+========================================================== */
+
+.logo-ring{
+
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:230px;
+    height:230px;
+
+    border-radius:50%;
+
+    border:2px solid rgba(0,212,255,.18);
+
+    pointer-events:none;
+
+}
+
+.logo-ring.ring2{
+
+    width:320px;
+    height:320px;
+
+    opacity:.45;
+
+}
+
+.logo-ring.ring3{
+
+    width:470px;
+    height:470px;
+
+    opacity:.20;
+
+}
+
+/* ==========================================================
+SVG SELALU DI ATAS EFEK
+========================================================== */
+
+#svgMap{
+
+    position:relative;
+
+    z-index:20;
+
+}
+
+/* efek visual tidak boleh menghalangi klik */
+
+.map-grid,
+.map-glow,
+.holo-floor,
+.floor-grid,
+.floor-ring,
+.floor-glow,
+.radar{
+
+    pointer-events:none;
+
+    z-index:2;
+
+}
+
+/* district tetap bisa diklik */
+
+#svgMap{
+
+    pointer-events:auto;
+
+}
+
+/* ==========================================================
+   BAGIAN 4
+   FOOTER + RUNNING TEXT + RESPONSIVE
+==========================================================*/
+
+/* ==========================================================
+FOOTER
+==========================================================*/
+
+.bottom-bar{
+
+    height:150px;
+
+    margin-top:18px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:14px;
+
+}
+
+/* ==========================================================
+RUNNING TEXT
+==========================================================*/
+
+.running-info{
+
+    width:100%;
+
+    height:48px;
+
+    display:flex;
+
+    align-items:center;
+
+    border-radius:24px;
+
+    overflow:hidden;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.15);
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.20);
+
+}
+
+.running-icon{
+
+    width:58px;
+
+    height:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    color:#00d4ff;
+
+    font-size:20px;
+
+    border-right:1px solid rgba(255,255,255,.12);
+
+}
+
+.running-info marquee{
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:500;
+
+}
+
+/* ==========================================================
+STATISTIK
+==========================================================*/
+
+.stats-row{
+
+    display:grid;
+
+    grid-template-columns:repeat(4,1fr);
+
+    gap:16px;
+
+}
+
+.stat-box{
+
+    border-radius:22px;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.15);
+
+    padding:18px;
+
+    text-align:center;
+
+    transition:.30s;
+
+}
+
+.stat-box:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:
+
+        0 0 30px rgba(0,212,255,.30);
+
+}
+
+.stat-box i{
+
+    color:#00d4ff;
+
+    font-size:28px;
+
+}
+
+.stat-box h4{
+
+    margin-top:10px;
+
+    font-size:30px;
+
+    color:#72e8ff;
+
+}
+
+.stat-box p{
+
+    margin-top:5px;
+
+    font-size:14px;
+
+    color:#d8f2ff;
+
+}
+
+/* ==========================================================
+MODAL
+==========================================================*/
+
+.apps-modal{
+
+    position:fixed;
+
+    inset:0;
+
+    display:none;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:rgba(0,0,0,.65);
+
+    backdrop-filter:blur(5px);
+
+    z-index:9999;
+
+}
+
+.apps-modal.show{
+
+    display:flex;
+
+}
+
+.apps-window{
+
+    width:1100px;
+
+    max-width:92%;
+
+    max-height:85vh;
+
+    overflow:auto;
+
+    border-radius:26px;
+
+    background:#0b223c;
+
+    border:1px solid rgba(255,255,255,.12);
+
+    box-shadow:
+
+        0 30px 70px rgba(0,0,0,.45);
+
+}
+
+.apps-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:22px 30px;
+
+    border-bottom:1px solid rgba(255,255,255,.08);
+
+}
+
+.apps-header h3{
+
+    color:#77e5ff;
+
+}
+
+.apps-header button{
+
+    background:none;
+
+    border:none;
+
+    color:white;
+
+    font-size:34px;
+
+    cursor:pointer;
+
+}
+
+.app-category{
+
+    padding:25px 30px;
+
+}
+
+.app-category h4{
+
+    margin-bottom:20px;
+
+    color:#00d4ff;
+
+}
+
+.app-grid{
+
+    display:grid;
+
+    grid-template-columns:
+
+        repeat(auto-fill,minmax(220px,1fr));
+
+    gap:16px;
+
+}
+
+.app-grid a{
+
+    border-radius:18px;
+
+    padding:18px;
+
+    background:rgba(255,255,255,.05);
+
+    color:white;
+
+    text-decoration:none;
+
+    transition:.30s;
+
+}
+
+.app-grid a:hover{
+
+    background:rgba(0,212,255,.18);
+
+    transform:translateY(-5px);
+
+}
+
+/* ==========================================================
+LOADING
+==========================================================*/
+
+#loadingScreen{
+
+    position:fixed;
+
+    inset:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#051321;
+
+    z-index:999999;
+
+}
+
+.loading-content{
+
+    width:420px;
+
+    text-align:center;
+
+}
+
+.loading-content img{
+
+    width:130px;
+
+}
+
+.loading-content h2{
+
+    margin-top:20px;
+
+    letter-spacing:3px;
+
+}
+
+.loading-content h4{
+
+    margin:12px 0 30px;
+
+    color:#79ddff;
+
+}
+
+.loading-bar{
+
+    width:100%;
+
+    height:10px;
+
+    overflow:hidden;
+
+    border-radius:50px;
+
+    background:rgba(255,255,255,.08);
+
+}
+
+.loading-progress{
+
+    width:0;
+
+    height:100%;
+
+    background:#00d4ff;
+
+}
+
+/* ==========================================================
+RESPONSIVE
+==========================================================*/
+
+@media (max-width:1600px){
+
+    .main-content{
+
+        grid-template-columns:
+            300px
+            1fr
+            300px;
+
+    }
+
+    .map-stage{
+
+        width:850px;
+        height:850px;
+
+    }
+
+    #svgMap{
+
+        width:470px;
+        height:470px;
+
+    }
+
+}
+
+@media (max-width:1366px){
+
+    .portal-title h1{
+
+        font-size:30px;
+
+    }
+
+    #clock{
+
+        font-size:36px;
+
+    }
+
+    .main-content{
+
+        grid-template-columns:
+            270px
+            1fr
+            270px;
+
+        gap:18px;
+
+    }
+
+    .map-stage{
+
+        width:850px;
+        height:850px;
+
+    }
+
+    #svgMap{
+
+        width:420px;
+        height:420px;
+
+    }
+
+    .orbit-item{
+
+        width:82px;
+        height:82px;
+
+    }
+
+    .logo-button{
+
+        width:150px;
+        height:150px;
+
+    }
+
+    .stats-row{
+
+        gap:10px;
+
+    }
+
+}
+
+/* ==========================================================
+ANIMASI
+==========================================================*/
+
+.glass-card,
+.stat-box,
+.orbit-item,
+.logo-button{
+
+    transition:
+
+        transform .30s ease,
+
+        box-shadow .30s ease,
+
+        background .30s ease;
+
+}
+
+#svgMap{
+
+    transition:
+
+        transform .25s ease,
+
+        filter .25s ease;
+
+}
+
+#svgMap:hover{
+
+    filter:
+
+        drop-shadow(0 0 35px rgba(0,212,255,.70));
+
+}
+
+/* FIX LANDING POSITION */
+
+html,
+body{
+    width:100%;
+    height:100%;
+    margin:0;
+    overflow:hidden;
+}
+
+
+.landing-page{
+
+    position:fixed !important;
+
+    top:0 !important;
+
+    left:0 !important;
+
+    width:100vw !important;
+
+    height:100vh !important;
+
+    margin:0 !important;
+
+    padding:0 !important;
+
+    transform:none !important;
+
+    display:flex !important;
+
+    opacity:1 !important;
+
+    visibility:visible !important;
+
+    z-index:10;
+
+}
+
+/* ==========================================================
+   DISTRICT EFFECT
+========================================================== */
+
+#svgMap .district{
+
+    cursor:pointer;
+
+    fill:#6fb8d6;
+
+    stroke:#ffffff;
+
+    stroke-width:1.3;
+
+    transition:
+        fill .25s,
+        stroke .25s,
+        stroke-width .25s,
+        filter .25s;
+
+}
+
+#svgMap .district:hover{
+
+    fill:#00d4ff;
+
+    stroke:#bfffff;
+
+    stroke-width:2.5;
+
+    filter:
+        drop-shadow(0 0 8px #00d4ff)
+        drop-shadow(0 0 18px #00d4ff);
+
+}
+
+#svgMap .district.active{
+
+    fill:#00e5ff;
+
+    stroke:#ffd700;
+
+    stroke-width:3;
+
+    filter:
+        drop-shadow(0 0 10px #00d4ff)
+        drop-shadow(0 0 22px #00ffff)
+        drop-shadow(0 0 30px #00ffff);
+
+}
+
+.video-fallback{
+
+    display:none;
+
+    width:100%;
+
+    height:100%;
+
+    object-fit:cover;
+
+}
+
+#tanggalHijriah{
+
+    font-size:14px;
+
+    font-weight:600;
+
+    color:#FFD54F;
+
+}
+
+.svg-container{
+
+    width:100%;
+
+    height:100%;
+
+    position:relative;
+
+    overflow:hidden;
+
+}
+
+.svg-container svg{
+
+    width:100%;
+
+    height:100%;
+
+}
+
+.map-loading{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    width:100%;
+
+    height:100%;
+
+    color:white;
+
+    font-size:18px;
+
+}

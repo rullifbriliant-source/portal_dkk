@@ -1,0 +1,180 @@
+#tooltip{
+
+position:fixed;
+
+display:none;
+
+padding:10px 15px;
+
+background:#08253f;
+
+color:white;
+
+border-radius:10px;
+
+pointer-events:none;
+
+font-size:14px;
+
+box-shadow:0 0 20px rgba(0,255,255,.3);
+
+z-index:9999;
+
+}
+
+svg .district{
+
+cursor:pointer;
+
+transition:.25s;
+
+stroke:white;
+
+stroke-width:1;
+
+}
+
+svg .district:hover{
+
+stroke:#00FFFF;
+
+stroke-width:2;
+
+}
+
+.map-warning{
+
+display:flex;
+
+justify-content:center;
+
+align-items:center;
+
+height:100%;
+
+font-size:18px;
+
+color:white;
+
+background:#10253d;
+
+border-radius:12px;
+
+}
+
+#mapContainer{
+
+position:relative;
+
+overflow:hidden;
+
+}
+
+.map-toolbar{
+
+position:absolute;
+
+top:15px;
+
+right:15px;
+
+z-index:500;
+
+display:flex;
+
+flex-direction:column;
+
+gap:10px;
+
+}
+
+.map-toolbar button{
+
+width:42px;
+
+height:42px;
+
+border:none;
+
+border-radius:50%;
+
+background:#08253f;
+
+color:white;
+
+cursor:pointer;
+
+font-size:18px;
+
+transition:.2s;
+
+}
+
+.map-toolbar button:hover{
+
+background:#00BCD4;
+
+color:#08253f;
+
+}
+
+.map-panel {
+    position:relative;
+    overflow:hidden;
+}
+
+
+.map-control {
+
+    position:absolute;
+
+    top:20px;
+
+    right:20px;
+
+    z-index:20;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:8px;
+
+}
+
+
+.map-control button {
+
+    width:42px;
+
+    height:42px;
+
+    border:none;
+
+    border-radius:6px;
+
+    background:#0d6efd;
+
+    color:white;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+}
+
+
+.map-control button:hover {
+
+    background:#084298;
+
+}
+
+
+.active-district {
+
+    stroke:#ff0000;
+
+    stroke-width:2px;
+
+}
