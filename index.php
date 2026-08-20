@@ -1,884 +1,813 @@
-<?php
-date_default_timezone_set('Asia/Jakarta');
-?>
-<!DOCTYPE html>
-<html lang="id">
+    <?php
+    date_default_timezone_set('Asia/Jakarta');
+    ?>
+    <!DOCTYPE html>
+    <html lang="id">
 
-<head>
+    <head>
 
-<meta charset="utf-8">
+    <meta charset="utf-8">
 
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo</title>
+    <title>Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo</title>
 
-<link rel="icon" href="assets/img/logo.png">
+    <link rel="icon" href="assets/img/logo.png">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
 
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
-<link rel="stylesheet"
-href="assets/css/style_v2.css">
+    <link rel="stylesheet"
+    href="assets/css/style_v2.css">
 
-<link rel="preload"
-href="assets/img/background.jpg"
-as="image">
+    <link rel="preload"
+    href="assets/img/background.jpg"
+    as="image">
 
-</head>
+    </head>
 
-<body class="loading">
+    <body class="loading">
 
-<!-- =======================================================
-BACKGROUND
-======================================================= -->
+    <!-- =======================================================
+    BACKGROUND
+    ======================================================= -->
 
-<div class="video-container">
+    <div class="video-container">
 
-<video
-    autoplay
-    muted
-    loop
-    playsinline
-    poster="assets/img/background.jpg">
+    <video
+        autoplay
+        muted
+        loop
+        playsinline
+        poster="assets/img/background.jpg">
 
 
 
-    <source src="assets/video/background.mp4" type="video/mp4">
+        <source src="assets/video/background.mp4" type="video/mp4">
 
-</video>
+    </video>
 
-<img
-class="video-fallback"
-src="assets/img/background.jpg"
-alt="">
+    <img
+    class="video-fallback"
+    src="assets/img/background.jpg"
+    alt="">
 
-</div>
+    </div>
 
-<div class="overlay-dark"></div>
+    <div class="overlay-dark"></div>
 
-<div class="grid-effect"></div>
+    <div class="grid-effect"></div>
 
-<canvas id="starCanvas"></canvas>
+    <canvas id="starCanvas"></canvas>
 
-<canvas id="networkCanvas"></canvas>
+    <canvas id="networkCanvas"></canvas>
 
-<div class="aurora aurora1"></div>
-<div class="aurora aurora2"></div>
-<div class="aurora aurora3"></div>
+    <div class="aurora aurora1"></div>
+    <div class="aurora aurora2"></div>
+    <div class="aurora aurora3"></div>
 
-<!-- =======================================================
-LOADING
-======================================================= -->
+    <!-- =======================================================
+    LOADING
+    ======================================================= -->
 
-<div id="loadingScreen">
+    <div id="loadingScreen">
 
-<div class="loading-content">
+    <div class="loading-content">
 
-<img src="assets/img/logo.png">
+    <img src="assets/img/logo.png">
 
-<h2>PORTAL TERPADU</h2>
+    <h2>PORTAL TERPADU</h2>
 
-<h4>Dinas Kesehatan Kabupaten Sukoharjo</h4>
+    <h4>Dinas Kesehatan Kabupaten Sukoharjo</h4>
 
-<div
-id="loadingText">
+    <div
+    id="loadingText">
 
-Memulai Portal...
+    Memulai Portal...
 
-</div>
+    </div>
 
-<div class="loading-bar">
+    <div class="loading-bar">
 
-<div class="loading-progress"
-id="loadingProgress"></div>
+    <div class="loading-progress"
+    id="loadingProgress"></div>
 
-</div>
+    </div>
 
-</div>
+    </div>
 
-</div>
+    </div>
 
-<!-- =======================================================
-HALAMAN
-======================================================= -->
+    <!-- =======================================================
+    HALAMAN
+    ======================================================= -->
 
-<div class="landing-page">
+    <div class="landing-page">
 
-<!-- =======================================================
-HEADER
-======================================================= -->
+    <!-- =======================================================
+    HEADER
+    ======================================================= -->
 
-<header class="top-header" id="topHeader">
+    <header class="top-header" id="topHeader">
+    <div class="header-title">
+        <div class="portal-title">
+        <div class="small-title">
+            PEMERINTAH KABUPATEN SUKOHARJO
+        </div>
+        <h1>
+            PORTAL TERPADU
+        </h1>
+        <h2>
+            DINAS KESEHATAN KABUPATEN SUKOHARJO
+        </h2>
+        <!-- Tanggal dipindah kesini -->
+        <div class="header-info-left">
+            <span id="tanggalIndonesia"></span>
+            <span class="weather-inline">
+            <i class="fas fa-cloud-sun"></i>
+            <span id="weather">Memuat cuaca...</span>
+            </span>
+        </div>
+        </div>
+        <div>
+        <img src="assets/img/logo.png" style="height:82px">
+        </div>
+    </div>
+    
+    <!-- Jam di tengah, terpisah -->
+    <div class="center-clock">
+        <div id="clock">00:00:00</div>
+    </div>
+    </header>
 
-<div class="header-title">
+    <!-- =======================================================
+    LIVE INFO
+    ======================================================= -->
 
-<div class="portal-title">
+    <div class="live-info">
 
-<div class="small-title">
+    <div class="info-card">
 
-PEMERINTAH KABUPATEN SUKOHARJO
+    <i class="fas fa-calendar-alt"></i>
 
-</div>
 
-<h1>
+    <span id="tanggalIndonesia"></span>
 
-PORTAL TERPADU
 
-</h1>
+    </div>
 
-<h2>
+    <div class="info-card">
 
-DINAS KESEHATAN KABUPATEN SUKOHARJO
+    <div id="clock">
 
-</h2>
+    00:00:00
 
-</div>
+    </div>
 
-<div>
+    </div>
 
-<img
-src="assets/img/logo.png"
-style="height:82px">
+    <div class="info-card weather-box">
 
-</div>
+    <i class="fas fa-cloud-sun"></i>
 
-</div>
+    <span id="weather">
 
-<!-- =======================================================
-LIVE INFO
-======================================================= -->
+    Memuat cuaca...
 
-<div class="live-info">
+    </span>
 
-<div class="info-card">
+    </div>
 
-<i class="fas fa-calendar-alt"></i>
+    </div>
 
+    </header>
 
-<span id="tanggalIndonesia"></span>
+    <!-- =======================================================
+    MAIN CONTENT
+    ======================================================= -->
 
+    <main class="main-content">
 
-</div>
+    <!-- =======================================================
+    LEFT PANEL
+    ======================================================= -->
 
-<div class="info-card">
+    <section
+    class="left-panel"
+    id="leftPanel">
 
-<div id="clock">
+        <div class="glass-card">
 
-00:00:00
+            <h4>
+                <i class="fas fa-circle-info"></i>
+                Informasi Portal
+            </h4>
 
-</div>
+            <p>
 
-</div>
+                Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo
+                merupakan pusat informasi digital yang mengintegrasikan
+                seluruh layanan, data kesehatan, dashboard,
+                aplikasi internal serta layanan publik
+                dalam satu tampilan interaktif.
 
-<div class="info-card weather-box">
+            </p>
 
-<i class="fas fa-cloud-sun"></i>
+            <div class="portal-feature">
 
-<span id="weather">
+                <div>
 
-Memuat cuaca...
+                    <i class="fas fa-hospital fa-2x"></i>
 
-</span>
+                    <br><br>
 
-</div>
+                    Puskesmas
 
-</div>
+                </div>
 
-</header>
+                <div>
 
-<!-- =======================================================
-MAIN CONTENT
-======================================================= -->
+                    <i class="fas fa-users fa-2x"></i>
 
-<main class="main-content">
+                    <br><br>
 
-<!-- =======================================================
-LEFT PANEL
-======================================================= -->
+                    SDM
 
-<section
-class="left-panel"
-id="leftPanel">
+                </div>
+
+                <div>
+
+                    <i class="fas fa-chart-line fa-2x"></i>
+
+                    <br><br>
+
+                    Dashboard
+
+                </div>
+
+                <div>
+
+                    <i class="fas fa-map-location-dot fa-2x"></i>
+
+                    <br><br>
+
+                    GIS
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="glass-card info-panel">
+
+            <h4>
+
+                <i class="fas fa-circle-nodes"></i>
+
+                Informasi Wilayah
+
+            </h4>
+
+        <table>
+
+    <tr>
+        <td>Kecamatan</td>
+        <td id="namaKecamatan">Kabupaten Sukoharjo</td>
+    </tr>
+
+    <tr>
+        <td>Penduduk</td>
+        <td id="jumlahPenduduk">-</td>
+    </tr>
+
+    <tr>
+        <td>Kepala Keluarga</td>
+        <td id="jumlahKK">-</td>
+    </tr>
+
+    <tr>
+        <td>Puskesmas</td>
+        <td id="jumlahPuskesmas">-</td>
+    </tr>
+
+    <tr>
+        <td>Pustu</td>
+        <td id="jumlahPustu">-</td>
+    </tr>
+
+    <tr>
+        <td>Posyandu</td>
+        <td id="jumlahPosyandu">-</td>
+    </tr>
+
+    <tr>
+        <td>Desa / Kelurahan</td>
+        <td id="jumlahDesa">-</td>
+    </tr>
+
+    </table>
+        </div>
+
+    </section>
+
+    <!-- =======================================================
+    CENTER PANEL
+    ======================================================= -->
+
+    <section class="center-panel">
+
+    <div id="map-container">
+
+    <div
+    class="map-stage"
+    id="mapStage">
+
+    <div class="map-grid"></div>
+
+    <div class="map-glow"></div>
+
+    <div class="radar radar1"></div>
+
+    <div class="radar radar2"></div>
+
+    <div class="radar radar3"></div>
+
+    <div class="holo-floor">
+
+    <div class="floor-glow"></div>
+
+    <div class="floor-ring ring-1"></div>
+
+    <div class="floor-ring ring-2"></div>
+
+    <div class="floor-ring ring-3"></div>
+
+    <div class="floor-ring ring-4"></div>
+
+    <div class="floor-grid"></div>
+
+    </div>
+
+    <!-- ===================================================
+    SVG MAP
+    =================================================== -->
+    <object id="svgInteractive" data="assets/svg/peta_sukoharjo_satelit_interaktif.svg" type="image/svg+xml"></object>
+
+    <!-- ===================================================
+    ORBIT MENU (PENYAKIT TERBANYAK)
+    =================================================== -->
+    <div id="orbitMenu">
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-virus-covid"></i>
+            <span class="disease-name">COVID-19</span>
+            <span class="disease-count">2.000</span>
+        </div>
+
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-lungs-virus"></i>
+            <span class="disease-name">ISPA</span>
+            <span class="disease-count">1.540</span>
+        </div>
+
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <span class="disease-name">Hipertensi</span>
+            <span class="disease-count">1.230</span>
+        </div>
+
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-droplet"></i>
+            <span class="disease-name">Diare</span>
+            <span class="disease-count">890</span>
+        </div>
+
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-syringe"></i>
+            <span class="disease-name">TBC</span>
+            <span class="disease-count">640</span>
+        </div>
+
+        <div class="orbit-item disease-orbit-item">
+            <i class="fa-solid fa-bone"></i>
+            <span class="disease-name">Diabetes</span>
+            <span class="disease-count">510</span>
+        </div>
+    </div>
+
+    <!-- =======================================================
+    RIGHT PANEL
+    ======================================================= -->
+
+    <section
+    class="right-panel"
+    id="rightPanel">
 
     <div class="glass-card">
 
-        <h4>
-            <i class="fas fa-circle-info"></i>
-            Informasi Portal
-        </h4>
+    <h4>
 
-        <p>
-
-            Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo
-            merupakan pusat informasi digital yang mengintegrasikan
-            seluruh layanan, data kesehatan, dashboard,
-            aplikasi internal serta layanan publik
-            dalam satu tampilan interaktif.
-
-        </p>
-
-        <div class="portal-feature">
-
-            <div>
-
-                <i class="fas fa-hospital fa-2x"></i>
-
-                <br><br>
-
-                Puskesmas
-
-            </div>
-
-            <div>
-
-                <i class="fas fa-users fa-2x"></i>
-
-                <br><br>
-
-                SDM
-
-            </div>
-
-            <div>
-
-                <i class="fas fa-chart-line fa-2x"></i>
-
-                <br><br>
-
-                Dashboard
-
-            </div>
-
-            <div>
-
-                <i class="fas fa-map-location-dot fa-2x"></i>
-
-                <br><br>
-
-                GIS
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <div class="glass-card info-panel">
-
-        <h4>
-
-            <i class="fas fa-circle-nodes"></i>
-
-            Informasi Wilayah
-
-        </h4>
-
-     <table>
-
-<tr>
-    <td>Kecamatan</td>
-    <td id="namaKecamatan">Kabupaten Sukoharjo</td>
-</tr>
-
-<tr>
-    <td>Penduduk</td>
-    <td id="jumlahPenduduk">-</td>
-</tr>
-
-<tr>
-    <td>Kepala Keluarga</td>
-    <td id="jumlahKK">-</td>
-</tr>
-
-<tr>
-    <td>Puskesmas</td>
-    <td id="jumlahPuskesmas">-</td>
-</tr>
-
-<tr>
-    <td>Pustu</td>
-    <td id="jumlahPustu">-</td>
-</tr>
-
-<tr>
-    <td>Posyandu</td>
-    <td id="jumlahPosyandu">-</td>
-</tr>
-
-<tr>
-    <td>Desa / Kelurahan</td>
-    <td id="jumlahDesa">-</td>
-</tr>
-
-</table>
-    </div>
-
-</section>
-
-<!-- =======================================================
-CENTER PANEL
-======================================================= -->
-
-<section class="center-panel">
-
-<div id="map-container">
-
-<div
-class="map-stage"
-id="mapStage">
-
-<div class="map-grid"></div>
-
-<div class="map-glow"></div>
-
-<div class="radar radar1"></div>
-
-<div class="radar radar2"></div>
-
-<div class="radar radar3"></div>
-
-<div class="holo-floor">
-
-<div class="floor-glow"></div>
-
-<div class="floor-ring ring-1"></div>
-
-<div class="floor-ring ring-2"></div>
-
-<div class="floor-ring ring-3"></div>
-
-<div class="floor-ring ring-4"></div>
-
-<div class="floor-grid"></div>
-
-</div>
-
-<!-- ===================================================
-SVG MAP
-=================================================== -->
-
-<div class="map-container">
-
-    <div class="map-left">
-
-        <object
-            id="svgMap"
-            data="assets/svg/sukoharjo.svg"
-            type="image/svg+xml">
-        </object>
-
-    </div>
-
-    <div class="map-right">
-
-        <object
-            id="svgInteractive"
-            data="assets/svg/sukoharjo_interactive.svg"
-            type="image/svg+xml">
-        </object>
-
-    </div>
-
-</div>
-
-<!-- ===================================================
-ORBIT MENU
-=================================================== -->
-
-<div id="orbitMenu" class="orbit-menu">
-
-<div class="logo-ring"></div>
-
-<div class="logo-ring ring2"></div>
-
-<div class="logo-ring ring3"></div>
-
-<a
-class="logo-button"
-id="btnPortal"
-href="#">
-
-<img
-
-src="assets/img/logo2.png"
-
-alt="Logo">
-
-<small>
-
-Portal Terpadu
-
-</small>
-
-</a>
-
-<a href="#" class="orbit-item orbit1">
-
-<i class="fas fa-envelope"></i>
-
-<span>Surat</span>
-
-</a>
-
-<a href="#" class="orbit-item orbit2">
-
-<i class="fas fa-calendar-days"></i>
-
-<span>Agenda</span>
-
-</a>
-
-<a href="#" class="orbit-item orbit3">
-
-<i class="fas fa-chart-column"></i>
-
-<span>Dashboard</span>
-
-</a>
-
-<a href="#" class="orbit-item orbit4">
-
-<i class="fas fa-tv"></i>
-
-<span>TV</span>
-
-</a>
-
-<a href="#" class="orbit-item orbit5">
-
-<i class="fas fa-layer-group"></i>
-
-<span>Aplikasi</span>
-
-</a>
-
-<a href="#" class="orbit-item orbit6">
-
-<i class="fas fa-gears"></i>
-
-<span>Pengaturan</span>
-
-</a>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- =======================================================
-RIGHT PANEL
-======================================================= -->
-
-<section
-class="right-panel"
-id="rightPanel">
-
-<div class="glass-card">
-
-<h4>
-
-<i class="fas fa-bullhorn"></i>
-
-Informasi Hari Ini
-
-</h4>
-
-<div
-id="agendaHariIni"
-class="agenda-container">
-
-Memuat agenda...
-
-</div>
-
-</div>
-
-<div class="glass-card">
-
-<h4>
-
-<i class="fas fa-chart-pie"></i>
-
-Statistik Cepat
-
-</h4>
-
-<table class="info-panel">
-
-<tr>
-
-<td>Puskesmas</td>
-
-<td id="statPuskesmas">12</td>
-
-</tr>
-
-<tr>
-
-<td>Pustu</td>
-
-<td id="statPustu">-</td>
-
-</tr>
-
-<tr>
-
-<td>Posyandu</td>
-
-<td id="statPosyandu">-</td>
-
-</tr>
-
-<tr>
-
-<td>Pegawai</td>
-
-<td id="statPegawai">-</td>
-
-</tr>
-
-</table>
-
-</div>
-
-</section>
-
-</main>
-
-<!-- =======================================================
-BOTTOM BAR
-======================================================= -->
-
-<footer
-class="bottom-bar"
-id="footerBar">
-
-    <!-- ==============================================
-         RUNNING TEXT
-    =============================================== -->
-
-    <div class="running-icon">
     <i class="fas fa-bullhorn"></i>
-</div>
 
-    <div class="running-wrapper">
+    Informasi Hari Ini
 
-        <div id="runningText"
-             class="running-text">
-             Loading...
-        </div>
+    </h4>
 
-    </div>
+    <div
+    id="agendaHariIni"
+    class="agenda-container">
 
-</div>
-
-
-
-    <!-- ==============================================
-         STATISTIK
-    =============================================== -->
-
-    <div class="stats-row">
-
-        <div class="stat-box">
-
-            <i class="fas fa-users"></i>
-
-            <h4 id="statPenduduk">
-
-                0
-
-            </h4>
-
-            <p>
-
-                Penduduk
-
-            </p>
-
-        </div>
-
-        <div class="stat-box">
-
-            <i class="fas fa-hospital"></i>
-
-            <h4 id="statPuskesmas2">
-
-                12
-
-            </h4>
-
-            <p>
-
-                Puskesmas
-
-            </p>
-
-        </div>
-
-        <div class="stat-box">
-
-            <i class="fas fa-house-medical"></i>
-
-            <h4 id="statPustu2">
-
-                0
-
-            </h4>
-
-            <p>
-
-                Pustu
-
-            </p>
-
-        </div>
-
-        <div class="stat-box">
-
-            <i class="fas fa-chart-line"></i>
-
-            <h4 id="statProgram">
-
-                0
-
-            </h4>
-
-            <p>
-
-                Program
-
-            </p>
-
-        </div>
+    Memuat agenda...
 
     </div>
 
-</footer>
+    </div>
 
-</div>
+    <div class="glass-card">
 
-<!-- =======================================================
-MODAL DAFTAR APLIKASI
-======================================================= -->
+    <h4>
 
-<div
-    class="apps-modal"
-    id="appsModal">
+    <i class="fas fa-chart-pie"></i>
 
-    <div class="apps-window">
+    Statistik Cepat
 
-        <div class="apps-header">
+    </h4>
 
-            <h3>
+    <table class="info-panel">
 
-                Portal Aplikasi DKK Sukoharjo
+    <tr>
 
-            </h3>
+    <td>Puskesmas</td>
 
-            <button id="closeApps">
+    <td id="statPuskesmas">12</td>
 
-                &times;
+    </tr>
 
-            </button>
+    <tr>
 
-        </div>
+    <td>Pustu</td>
 
-        <div class="app-category">
+    <td id="statPustu">-</td>
 
-            <h4>
+    </tr>
 
-                Aplikasi Internal
+    <tr>
 
-            </h4>
+    <td>Posyandu</td>
 
-            <div class="app-grid">
+    <td id="statPosyandu">-</td>
 
-                <a href="surat/" target="_blank">
+    </tr>
 
-                    📄 Surat Digital
+    <tr>
 
-                </a>
+    <td>Pegawai</td>
 
-                <a href="agenda/" target="_blank">
+    <td id="statPegawai">-</td>
 
-                    📅 Agenda Rapat
+    </tr>
 
-                </a>
+    </table>
 
-                <a href="dashboard/" target="_blank">
+    </div>
 
-                    📊 Dashboard
+    </section>
 
-                </a>
+    </main>
 
-                <a href="gis/" target="_blank">
+    <!-- =======================================================
+    BOTTOM BAR
+    ======================================================= -->
 
-                    🗺 GIS Kesehatan
+    <footer
+    class="bottom-bar"
+    id="footerBar">
 
-                </a>
+        <!-- ==============================================
+            RUNNING TEXT
+        =============================================== -->
 
-                <a href="pegawai/" target="_blank">
+        <div class="running-icon">
+        <i class="fas fa-bullhorn"></i>
+    </div>
 
-                    👥 Kepegawaian
+        <div class="running-wrapper">
 
-                </a>
-
-                <a href="aset/" target="_blank">
-
-                    🏢 Aset
-
-                </a>
-
-            </div>
-
-        </div>
-
-        <div class="app-category">
-
-            <h4>
-
-                Pelayanan Publik
-
-            </h4>
-
-            <div class="app-grid">
-
-                <a href="#">
-
-                    🏥 Puskesmas
-
-                </a>
-
-                <a href="#">
-
-                    💊 Farmasi
-
-                </a>
-
-                <a href="#">
-
-                    ❤️ GERMAS
-
-                </a>
-
-                <a href="#">
-
-                    📈 SPM
-
-                </a>
-
-                <a href="#">
-
-                    👶 KIA
-
-                </a>
-
-                <a href="#">
-
-                    🩺 Surveilans
-
-                </a>
-
+            <div id="runningText"
+                class="running-text">
+                Loading...
             </div>
 
         </div>
 
     </div>
 
-</div>
-
-<!-- =======================================================
-MOUSE GLOW
-======================================================= -->
-
-<div id="mouseGlow"></div>
-
-<!-- =======================================================
-JAVASCRIPT LIBRARY
-======================================================= -->
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
-
-<!-- =======================================================
-APPLICATION
-======================================================= -->
 
 
+        <!-- ==============================================
+            STATISTIK
+        =============================================== -->
 
-<script src="assets/js/starfield.js"></script>
+        <div class="stats-row">
 
-<script src="assets/js/network.js"></script>
+            <div class="stat-box">
 
-<script src="assets/js/map.js"></script>
+                <i class="fas fa-users"></i>
 
-<script src="assets/js/app_v2.js"></script>
+                <h4 id="statPenduduk">
 
-<script src="assets/js/responsive.js"></script>
+                    0
 
-<!-- =======================================================
-STARTUP
-======================================================= -->
-<script>
+                </h4>
 
-window.addEventListener("load",function(){
+                <p>
 
-    var bar=document.getElementById("loadingProgress");
-    var screen=document.getElementById("loadingScreen");
+                    Penduduk
 
-    var p=0;
+                </p>
 
-    var timer=setInterval(function(){
+            </div>
 
-        p++;
+            <div class="stat-box">
 
-        bar.style.width=p+"%";
+                <i class="fas fa-hospital"></i>
 
-        if(p>=100){
+                <h4 id="statPuskesmas2">
 
-            clearInterval(timer);
+                    12
 
-            screen.style.opacity="0";
+                </h4>
 
-            setTimeout(function(){
+                <p>
 
-                screen.style.display="none";
+                    Puskesmas
 
-                document.body.classList.remove("loading");
-                document.body.classList.add("portal-ready");
+                </p>
 
-            },500);
+            </div>
 
+            <div class="stat-box">
+
+                <i class="fas fa-house-medical"></i>
+
+                <h4 id="statPustu2">
+
+                    0
+
+                </h4>
+
+                <p>
+
+                    Pustu
+
+                </p>
+
+            </div>
+
+            <div class="stat-box">
+
+                <i class="fas fa-chart-line"></i>
+
+                <h4 id="statProgram">
+
+                    0
+
+                </h4>
+
+                <p>
+
+                    Program
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+    </div>
+
+    <!-- =======================================================
+    MODAL DAFTAR APLIKASI
+    ======================================================= -->
+
+    <div
+        class="apps-modal"
+        id="appsModal">
+
+        <div class="apps-window">
+
+            <div class="apps-header">
+
+                <h3>
+
+                    Portal Aplikasi DKK Sukoharjo
+
+                </h3>
+
+                <button id="closeApps">
+
+                    &times;
+
+                </button>
+
+            </div>
+
+            <div class="app-category">
+
+                <h4>
+
+                    Aplikasi Internal
+
+                </h4>
+
+                <div class="app-grid">
+
+                    <a href="surat/" target="_blank">
+
+                        📄 Surat Digital
+
+                    </a>
+
+                    <a href="agenda/" target="_blank">
+
+                        📅 Agenda Rapat
+
+                    </a>
+
+                    <a href="dashboard/" target="_blank">
+
+                        📊 Dashboard
+
+                    </a>
+
+                    <a href="gis/" target="_blank">
+
+                        🗺 GIS Kesehatan
+
+                    </a>
+
+                    <a href="pegawai/" target="_blank">
+
+                        👥 Kepegawaian
+
+                    </a>
+
+                    <a href="aset/" target="_blank">
+
+                        🏢 Aset
+
+                    </a>
+
+                </div>
+
+            </div>
+
+            <div class="app-category">
+
+                <h4>
+
+                    Pelayanan Publik
+
+                </h4>
+
+                <div class="app-grid">
+
+                    <a href="#">
+
+                        🏥 Puskesmas
+
+                    </a>
+
+                    <a href="#">
+
+                        💊 Farmasi
+
+                    </a>
+
+                    <a href="#">
+
+                        ❤️ GERMAS
+
+                    </a>
+
+                    <a href="#">
+
+                        📈 SPM
+
+                    </a>
+
+                    <a href="#">
+
+                        👶 KIA
+
+                    </a>
+
+                    <a href="#">
+
+                        🩺 Surveilans
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =======================================================
+    MOUSE GLOW
+    ======================================================= -->
+
+    <div id="mouseGlow"></div>
+
+    <!-- =======================================================
+    JAVASCRIPT LIBRARY
+    ======================================================= -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
+
+    <!-- =======================================================
+    APPLICATION
+    ======================================================= -->
+
+
+
+    <script src="assets/js/starfield.js"></script>
+
+    <script src="assets/js/network.js"></script>
+
+    <script src="assets/js/map.js"></script>
+
+    <script src="assets/js/app_v2.js"></script>
+
+    <script src="assets/js/responsive.js"></script>
+
+    <!-- =======================================================
+    STARTUP
+    ======================================================= -->
+    <script>
+
+    window.addEventListener("load",function(){
+
+        var bar=document.getElementById("loadingProgress");
+        var screen=document.getElementById("loadingScreen");
+
+        var p=0;
+
+        var timer=setInterval(function(){
+
+            p++;
+
+            bar.style.width=p+"%";
+
+            if(p>=100){
+
+                clearInterval(timer);
+
+                screen.style.opacity="0";
+
+                setTimeout(function(){
+
+                    screen.style.display="none";
+
+                    document.body.classList.remove("loading");
+                    document.body.classList.add("portal-ready");
+
+                },500);
+
+            }
+
+        },20);
+
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        if (typeof Orbit !== "undefined") {
+            Orbit.init();
         }
 
-    },20);
+        if (typeof MapEngine !== "undefined") {
+            MapEngine.init();
+        }
 
-});
+    });
 
-document.addEventListener("DOMContentLoaded", function () {
-
-    if (typeof Orbit !== "undefined") {
-        Orbit.init();
-    }
-
-    if (typeof MapEngine !== "undefined") {
-        MapEngine.init();
-    }
-
-});
-
-</script>
+    </script>
 
 
-</body>
+    </body>
 
-</html>
+    </html>
