@@ -82,7 +82,7 @@
 
     <div class="loading-content">
 
-    <img src="assets/img/logo.png">
+    <img src="assets/img/kabupaten.png">
 
     <h2>PORTAL TERPADU</h2>
 
@@ -116,31 +116,47 @@
     HEADER
     ======================================================= -->
 
-    <header class="top-header" id="topHeader">
-    <div class="header-title">
-        <div class="portal-title">
-        <div class="small-title">
-            PEMERINTAH KABUPATEN SUKOHARJO
+<header class="top-header">
+
+    <!-- KIRI: LOGO KABUPATEN + INFORMASI HEADER -->
+    <div class="header-left">
+
+        <div class="header-logo-kabupaten">
+            <img src="assets/img/kabupaten.png"
+                 alt="Logo Kabupaten Sukoharjo">
         </div>
-        <h1>
-            PORTAL TERPADU
-        </h1>
-        <h2>
-            DINAS KESEHATAN KABUPATEN SUKOHARJO
-        </h2>
-        <!-- Tanggal dipindah kesini -->
-        <div class="header-info-left">
-            <span id="tanggalIndonesia"></span>
-            <span class="weather-inline">
-            <i class="fas fa-cloud-sun"></i>
-            <span id="weather">Memuat cuaca...</span>
-            </span>
+
+        <div class="header-info">
+            <div class="government-name">
+                PEMERINTAH KABUPATEN SUKOHARJO
+            </div>
+
+            <h1>PORTAL TERPADU</h1>
+
+            <div class="department-name">
+                DINAS KESEHATAN KABUPATEN SUKOHARJO
+            </div>
+
+            <div class="header-date">
+                <span id="tanggalIndonesia"></span>
+
+                <span class="weather">
+                    ☀️
+                    <span id="weather">-</span>
+                </span>
+            </div>
         </div>
-        </div>
-        <div>
-        <img src="assets/img/logo.png" style="height:82px">
-        </div>
+
     </div>
+
+
+    <!-- KANAN: LOGO SUKOHARJO SPEKTAKULER -->
+    <div class="header-logo-spektakuler">
+        <img src="assets/img/spektakuler.png"
+             alt="Sukoharjo Spektakuler">
+    </div>
+
+</header>
     
     <!-- Jam di tengah, terpisah -->
     <div class="center-clock">
