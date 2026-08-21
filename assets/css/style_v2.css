@@ -638,7 +638,7 @@ RIGHT PANEL
 
     padding:-5px 0;
 
-    border-bottom:1px solid rgba(255,255,255,.08);
+    border-bottom:1px solid rgba(176, 28, 28, 0.08);
 
 }
 
@@ -2249,4 +2249,61 @@ NONAKTIFKAN ANIMASI TILT PADA CARD
     height: 100%;
     object-fit: contain;
     display: block;
+}
+
+
+/* ==========================================================
+   STATS ROW DI DALAM CARD INFORMASI PORTAL
+========================================================== */
+
+.left-panel .stats-row{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 14px;
+    width: 100%;
+}
+
+.left-panel .stat-box{
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(209, 216, 225, 0.042) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: none;
+    border: none;
+    transition: .30s;
+}
+
+.left-panel .stat-box:hover{
+    background: rgba(0,212,255,.18);
+    transform: translateY(-5px);
+}
+
+.left-panel .stat-box i{
+    font-size: 22px;
+    color: #ffffff;
+}
+
+.left-panel .stat-box h4{
+    font-size: 20px;
+    margin-top: 10px;
+    color: #ffffff;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.left-panel .stat-box p{
+    font-size: 13px;
+    margin-top: 4px;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bottom-bar{
+    display: none !important;
 }

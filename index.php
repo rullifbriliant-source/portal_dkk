@@ -216,7 +216,10 @@
     LEFT PANEL
     ======================================================= -->
 
-    <section
+    
+        
+
+    </section><section
     class="left-panel"
     id="leftPanel">
 
@@ -281,59 +284,37 @@
 
             </div>
 
+            <div class="stats-row">
+
+                <div class="stat-box">
+                    <i class="fas fa-users"></i>
+                    <h4 id="statPenduduk">0</h4>
+                    <p>Penduduk</p>
+                </div>
+
+                <div class="stat-box">
+                    <i class="fas fa-hospital"></i>
+                    <h4 id="statPuskesmas2">12</h4>
+                    <p>Puskesmas</p>
+                </div>
+
+                <div class="stat-box">
+                    <i class="fas fa-house-medical"></i>
+                    <h4 id="statPustu2">0</h4>
+                    <p>Pustu</p>
+                </div>
+
+                <div class="stat-box">
+                    <i class="fas fa-chart-line"></i>
+                    <h4 id="statProgram">0</h4>
+                    <p>Program</p>
+                </div>
+
+            </div>
+
         </div>
 
-        <div class="glass-card info-panel">
-
-            <h4>
-
-                <i class="fas fa-circle-nodes"></i>
-
-                Informasi Wilayah
-
-            </h4>
-
-        <table>
-
-    <tr>
-        <td>Kecamatan</td>
-        <td id="namaKecamatan">Kabupaten Sukoharjo</td>
-    </tr>
-
-    <tr>
-        <td>Penduduk</td>
-        <td id="jumlahPenduduk">-</td>
-    </tr>
-
-    <tr>
-        <td>Kepala Keluarga</td>
-        <td id="jumlahKK">-</td>
-    </tr>
-
-    <tr>
-        <td>Puskesmas</td>
-        <td id="jumlahPuskesmas">-</td>
-    </tr>
-
-    <tr>
-        <td>Pustu</td>
-        <td id="jumlahPustu">-</td>
-    </tr>
-
-    <tr>
-        <td>Posyandu</td>
-        <td id="jumlahPosyandu">-</td>
-    </tr>
-
-    <tr>
-        <td>Desa / Kelurahan</td>
-        <td id="jumlahDesa">-</td>
-    </tr>
-
-    </table>
-        </div>
-
-    </section>
+</section>
 
     <!-- =======================================================
     CENTER PANEL
@@ -495,6 +476,39 @@
 
     </div>
 
+    <div class="glass-card info-panel">
+        <h4>
+            <i class="fas fa-circle-nodes"></i>
+            Data Dasar
+        </h4>
+        <table>
+            <tr>
+                <td>Kecamatan</td>
+                <td id="namaKecamatan">Kabupaten Sukoharjo</td>
+            </tr>
+            <tr>
+                <td>Desa / Kelurahan</td>
+                <td id="jumlahDesa">-</td>
+            </tr>
+            <tr>
+                <td>Penduduk</td>
+                <td id="jumlahPenduduk">-</td>
+            </tr>
+            <tr>
+                <td>Puskesmas</td>
+                <td id="jumlahPuskesmas">-</td>
+            </tr>
+            <tr>
+                <td>Pustu</td>
+                <td id="jumlahPustu">-</td>
+            </tr>
+            <tr>
+                <td>Posyandu</td>
+                <td id="jumlahPosyandu">-</td>
+            </tr>
+        </table>
+    </div>
+
     </section>
 
     </main>
@@ -504,109 +518,21 @@
     ======================================================= -->
 
     <footer
-    class="bottom-bar"
-    id="footerBar">
+class="bottom-bar"
+id="footerBar">
 
-        <!-- ==============================================
-            RUNNING TEXT
-        =============================================== -->
-
-        <div class="running-icon">
+    <div class="running-icon">
         <i class="fas fa-bullhorn"></i>
     </div>
 
-        <div class="running-wrapper">
+    <div class="running-wrapper">
 
-            <div id="runningText"
-                class="running-text">
-                Loading...
-            </div>
-
+        <div id="runningText"
+            class="running-text">
+            Loading...
         </div>
 
     </div>
-
-
-
-        <!-- ==============================================
-            STATISTIK
-        =============================================== -->
-
-        <div class="stats-row">
-
-            <div class="stat-box">
-
-                <i class="fas fa-users"></i>
-
-                <h4 id="statPenduduk">
-
-                    0
-
-                </h4>
-
-                <p>
-
-                    Penduduk
-
-                </p>
-
-            </div>
-
-            <div class="stat-box">
-
-                <i class="fas fa-hospital"></i>
-
-                <h4 id="statPuskesmas2">
-
-                    12
-
-                </h4>
-
-                <p>
-
-                    Puskesmas
-
-                </p>
-
-            </div>
-
-            <div class="stat-box">
-
-                <i class="fas fa-house-medical"></i>
-
-                <h4 id="statPustu2">
-
-                    0
-
-                </h4>
-
-                <p>
-
-                    Pustu
-
-                </p>
-
-            </div>
-
-            <div class="stat-box">
-
-                <i class="fas fa-chart-line"></i>
-
-                <h4 id="statProgram">
-
-                    0
-
-                </h4>
-
-                <p>
-
-                    Program
-
-                </p>
-
-            </div>
-
-        </div>
 
     </footer>
 
