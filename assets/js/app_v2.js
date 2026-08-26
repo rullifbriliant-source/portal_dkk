@@ -1368,6 +1368,7 @@ const PortalAPI = {
         this.loadAgenda();
         this.loadDashboard();
         this.loadFasyankes();  
+        this.loadSdm();
     },
     
 
@@ -1454,7 +1455,7 @@ const PortalAPI = {
             .catch(function(err) {
                 Log.warn("Gagal load data fasyankes:", err);
             });
-    },
+    },    
 
     renderFasyankes: function(items) {
         var container = DOM.id("fasyankesContainer");
@@ -1482,6 +1483,42 @@ const PortalAPI = {
         html += '</table>';
         container.innerHTML = html;
     },
+    // ==========================================================
+// SDM
+// ==========================================================
+
+loadSdm: function() {
+    var cache = Cache.get("sdm", 120000);
+    if (cache) {
+        this.renderSdm(cache);
+        return;
+    }
+    this.fetchJSON("api/get_sdm.php?ts=" + Date.now())
+        .then(function(json) {
+            if (json.status) {
+                Cache.set("sdm", json.data);
+                PortalAPI.renderSdm(json.data);
+            }
+        })
+        .catch(function(err) {
+            Log.warn("Gagal load data sdm:", err);
+        });
+},
+
+renderSdm: function(items) {
+    var container = DOM.id("sdmContainer");
+    if (!container) return;
+    
+    var html = '<table class="info-panel">';
+    items.forEach(function(item) {
+        var nama = item.nama || item.nama_item || '';
+        var nilai = item.nilai || 0;
+        html += '<tr><td>' + nama + '</td><td>' + Util.number(nilai) + '</td></tr>';
+    });
+    html += '</table>';
+    container.innerHTML = html;
+},
+
 
     
 

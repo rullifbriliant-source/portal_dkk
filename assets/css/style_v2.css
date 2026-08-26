@@ -153,13 +153,14 @@ body { min-height:100vh; overflow-y:visible; }
 }
 
 .main-content {
+    position:relative;
     flex:1; margin-top:22px;
-    display:grid; grid-template-columns:280px 1fr 480px;
+    display:grid; grid-template-columns:320px 1fr 440px;
     gap:20px; align-items:center; min-height:0; overflow:visible;
 }
 .left-panel, .right-panel {
     height:100%; display:flex; flex-direction:column; gap:18px;
-    z-index:20; overflow:visible;
+    z-index:20; overflow:visible; min-width:0;
 }
 
 .glass-card {
@@ -187,11 +188,13 @@ body { min-height:100vh; overflow-y:visible; }
 }
 
 .center-panel {
-    position:relative; display:flex; justify-content:center; align-items:center;
-    height:100%; overflow:visible;
+    display:flex; justify-content:center; align-items:center;
+    height:100%; overflow:visible; min-width:0;
 }
 #map-container {
-    position:relative; width:100%; height:100%;
+    position:absolute; left:50%; top:50%;
+    width:900px; height:900px;
+    transform:translate(-50%, -50%);
     display:flex; justify-content:center; align-items:center;
     background:transparent; overflow:visible;
 }
@@ -199,12 +202,12 @@ body { min-height:100vh; overflow-y:visible; }
     position:relative; width:100%; height:100%;
     display:flex; justify-content:center; align-items:center; overflow:visible;
 }
-.map-container object { width:100%; height:100%; max-width:100%; max-height:100%; }
+#map-container object { width:100%; height:100%; max-width:100%; max-height:100%; }
 
 .map-stage {
     position:relative; width:900px; height:900px;
     display:flex; justify-content:center; align-items:center;
-    margin:0 0 0  auto; background:transparent; border:none;
+    margin:0; background:transparent; border:none;
     box-shadow:none; overflow:visible;
 }
 
@@ -356,7 +359,7 @@ body { min-height:100vh; overflow-y:visible; }
 .right-panel .glass-card h4 {
     display:flex; align-items:center; gap:8px;
     margin-bottom:10px; font-size:14px; font-weight:700;
-    color:#84e7ff; white-space:nowrap;
+    color:#84e7ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .right-panel .glass-card h4 i {
     font-size:13px; color:#00d4ff; flex-shrink:0;
@@ -385,6 +388,7 @@ body { min-height:100vh; overflow-y:visible; }
 }
 .right-panel .info-panel td:last-child {
     width:35%; color:#fff; font-weight:600; text-align:right; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;
 }
 
 .agenda-container { min-height:60px; overflow:visible; }
@@ -510,16 +514,18 @@ body { min-height:100vh; overflow-y:visible; }
 
 /* ---- RESPONSIVE ---- */
 @media (max-width:1600px) {
-    .main-content { grid-template-columns:300px 1fr 460px; }
+    .main-content { grid-template-columns:320px 1fr 420px; }
     .map-stage { width:850px; height:850px; }
+    #map-container { width:850px; height:850px; }
     #svgMap { width:470px; height:470px; }
 }
 @media (max-width:1366px) {
     .portal-title h1 { font-size:36px !important; }
     .portal-title h2 { font-size:13px !important; }
     #clock { font-size:42px; }
-    .main-content { grid-template-columns:270px 1fr 400px; gap:18px; }
+    .main-content { grid-template-columns:290px 1fr 370px; gap:18px; }
     .map-stage { width:850px; height:850px; }
+    #map-container { width:850px; height:850px; }
     #svgMap { width:420px; height:420px; }
     .orbit-item { width:82px; height:82px; }
     .logo-button { width:150px; height:150px; }
@@ -542,14 +548,18 @@ body { min-height:100vh; overflow-y:visible; }
     .header-date { font-size:14px; gap:10px; }
     .main-content { grid-template-columns:1fr; gap:20px; }
     .left-panel, .right-panel, .center-panel { width:100%; height:auto; }
-    .map-stage { width:100%; max-width:600px; height:600px; }
+    #map-container {
+        position:relative; left:auto; top:auto; transform:none;
+        width:100%; max-width:600px; height:600px; margin:0 auto;
+    }
+    .map-stage { width:100%; max-width:600px; height:600px; --map-shift-x:0px; }
     #svgMap { width:100%; height:100%; }
 }
 
 /* ---- TV / 4K ---- */
 @media (min-width:1920px) {
-    .landing-page { padding:30px 40px 50px; }
-    .main-content { grid-template-columns:320px 1fr 520px !important; gap:30px !important; }
+    .landing-page { padding:30px 16px 50px 40px; }
+    .main-content { grid-template-columns:270px 1fr 510px !important; gap:30px !important; }
     .portal-title h1 { font-size:56px !important; }
     .portal-title h2 { font-size:20px !important; letter-spacing:4px; }
     .glass-card { padding:30px; border-radius:28px; }
@@ -557,11 +567,12 @@ body { min-height:100vh; overflow-y:visible; }
     .right-panel .glass-card h4 { font-size:16px; }
     .right-panel .info-panel td { font-size:14px; padding:8px 0; }
     #clock { font-size:64px; }
-    .map-stage { width:1000px; height:1000px; }
+    .map-stage { width:1400px; height:1400px; }
+    #map-container { width:1400px; height:1400px; }
 }
 @media (min-width:3840px) {
     .landing-page { padding:50px 80px 80px; }
-    .main-content { grid-template-columns:400px 1fr 600px !important; gap:40px !important; }
+    .main-content { grid-template-columns:460px 1fr 540px !important; gap:40px !important; }
     .portal-title h1 { font-size:72px !important; }
     .portal-title h2 { font-size:26px !important; }
     .glass-card { padding:40px; border-radius:32px; }
@@ -569,6 +580,7 @@ body { min-height:100vh; overflow-y:visible; }
     .right-panel .info-panel td { font-size:16px; padding:10px 0; }
     #clock { font-size:80px; }
     .map-stage { width:1200px; height:1200px; }
+    #map-container { width:1200px; height:1200px; }
 }
 
 /* ---- Matikan animasi card kanan ---- */
@@ -585,5 +597,3 @@ body { min-height:100vh; overflow-y:visible; }
     transform: none !important;
     transition: none !important;
 }
-
-

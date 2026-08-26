@@ -54,23 +54,28 @@ if (mysqli_num_rows($checkTablePenyakit) > 0) {
 }
 
 // ============================================================
-// AMBIL DATA SDM (jika ada)
+// AMBIL DATA SDM ITEMS
 // ============================================================
 
-$dataSdm = [
-    'dokter' => 0,
-    'perawat' => 0,
-    'bidan' => 0,
-    'nakes_lainnya' => 0
-];
-
-$checkTableSdm = mysqli_query($config, "SHOW TABLES LIKE 'tbl_sdm'");
+$itemsSdm = [];
+$checkTableSdm = mysqli_query($config, "SHOW TABLES LIKE 'tbl_sdm_items'");
 if (mysqli_num_rows($checkTableSdm) > 0) {
-    $querySdm = mysqli_query($config, "SELECT * FROM tbl_sdm LIMIT 1");
-    if ($querySdm && mysqli_num_rows($querySdm) > 0) {
-        $rowSdm = mysqli_fetch_assoc($querySdm);
-        $dataSdm = array_merge($dataSdm, $rowSdm);
+    $querySdm = mysqli_query($config, "SELECT nama_item, nilai FROM tbl_sdm_items WHERE aktif='Y' ORDER BY urutan");
+    while ($row = mysqli_fetch_assoc($querySdm)) {
+        $itemsSdm[] = $row;
     }
+}
+$sdmCount = count($itemsSdm);
+
+// Jika belum ada data, default
+if (empty($itemsSdm)) {
+    $itemsSdm = [
+        ['nama_item' => 'Dokter', 'nilai' => 85],
+        ['nama_item' => 'Perawat', 'nilai' => 320],
+        ['nama_item' => 'Bidan', 'nilai' => 210],
+        ['nama_item' => 'Nakes Lainnya', 'nilai' => 145]
+    ];
+    $sdmCount = count($itemsSdm);
 }
 
 ?>
@@ -440,33 +445,36 @@ if (mysqli_num_rows($checkTableSdm) > 0) {
                 </a>
             </div>
 
-            <!-- ==================================================
-            SDM
-            =================================================== -->
-            <div class="card-editor">
-                <div class="card-title">
-                    <div class="card-title-left">
-                        <i class="fas fa-users"></i>
-                        <div>
-                            <h3>SDM Kesehatan</h3>
-                            <p>Data sumber daya manusia</p>
-                        </div>
-                    </div>
-                    <span class="badge badge-warning">SEGERA</span>
-                </div>
-
-                <table>
-                    <tr><td>Dokter</td><td><?= number_format((int)$dataSdm['dokter']) ?></td></tr>
-                    <tr><td>Perawat</td><td><?= number_format((int)$dataSdm['perawat']) ?></td></tr>
-                    <tr><td>Bidan</td><td><?= number_format((int)$dataSdm['bidan']) ?></td></tr>
-                    <tr><td>Nakes Lainnya</td><td><?= number_format((int)$dataSdm['nakes_lainnya']) ?></td></tr>
-                </table>
-
-                <a href="#" class="btn-edit btn-disabled">
-                    <i class="fas fa-pen"></i> Edit Data SDM
-                </a>
+           <!-- ==================================================
+     SDM (dinamis dari tbl_sdm_items)
+================================================== -->
+<div class="card-editor">
+    <div class="card-title">
+        <div class="card-title-left">
+            <i class="fas fa-users"></i>
+            <div>
+                <h3>SDM Kesehatan</h3>
+                <p>Data sumber daya manusia</p>
             </div>
-
+        </div>
+        <span class="badge"><?= $sdmCount ?? 0 ?> item</span>
+    </div>
+    <table>
+        <?php if (isset($itemsSdm) && count($itemsSdm) > 0): ?>
+            <?php foreach ($itemsSdm as $item): ?>
+            <tr>
+                <td><?= htmlspecialchars($item['nama_item']) ?></td>
+                <td><?= number_format((int)$item['nilai']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);padding:10px 0;">Belum ada data</td></tr>
+        <?php endif; ?>
+    </table>
+    <a href="crud/sdm.php" class="btn-edit">
+        <i class="fas fa-pen"></i> Kelola SDM
+    </a>
+</div>
             <!-- ==================================================
             PENYAKIT
             =================================================== -->

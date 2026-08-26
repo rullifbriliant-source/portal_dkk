@@ -422,34 +422,18 @@
     </div>
 </div>
 
-        <!-- SDKM -->
-        <div class="glass-card">
-
-            <h4>
-                <i class="fas fa-user-doctor"></i>
-                SDKM
-            </h4>
-
-            <table class="info-panel">
-                <tr>
-                    <td>Dokter</td>
-                    <td>85</td>
-                </tr>
-                <tr>
-                    <td>Perawat</td>
-                    <td>320</td>
-                </tr>
-                <tr>
-                    <td>Bidan</td>
-                    <td>210</td>
-                </tr>
-                <tr>
-                    <td>Nakes Lainnya</td>
-                    <td>145</td>
-                </tr>
-            </table>
-
-        </div>
+       <!-- SDM -->
+<div class="glass-card">
+    <h4>
+        <i class="fas fa-user-doctor"></i>
+        SDM Kesehatan
+    </h4>
+    <div id="sdmContainer">
+        <table class="info-panel">
+            <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);">Memuat data...</td></tr>
+        </table>
+    </div>
+</div>
 
         <!-- DATA DASAR -->
         <div class="glass-card">

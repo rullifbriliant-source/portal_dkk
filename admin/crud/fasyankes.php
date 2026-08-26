@@ -106,6 +106,22 @@ if (isset($_GET['delete'])) {
 </head>
 <body>
 
+  <!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <img src="../../assets/img/kabupaten.png" alt="Logo">
+        <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
+    </div>
+    <ul class="sidebar-menu">
+        <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="fasyankes.php" class="active"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="../sdm.php"><i class="fas fa-users"></i> SDM</a></li>      <!-- pakai ../ -->
+        <li><a href="../penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="../data_dasar.php"><i class="fas fa-map"></i> Data Dasar</a></li>
+        <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+    </ul>
+</div>
+
 <!-- MAIN -->
 <div class="main-content">
     <div class="page-header">
@@ -135,6 +151,7 @@ if (isset($_GET['delete'])) {
             <button type="submit" name="add" class="btn-primary"><i class="fas fa-save"></i> Tambah</button>
         </form>
     </div>
+
 
     <!-- TABEL LIST -->
     <div class="card">
