@@ -1367,7 +1367,9 @@ const PortalAPI = {
         this.loadRunning();
         this.loadAgenda();
         this.loadDashboard();
+        this.loadFasyankes();  
     },
+    
 
     fetchJSON: function(url) {
         return fetch(url, { cache: "no-store" })
@@ -1436,6 +1438,51 @@ const PortalAPI = {
             });
     },
 
+    loadFasyankes: function() {
+        var cache = Cache.get("fasyankes", 120000);
+        if (cache) {
+            this.renderFasyankes(cache);
+            return;
+        }
+        this.fetchJSON("api/get_fasyankes.php?ts=" + Date.now())
+            .then(function(json) {
+                if (json.status) {
+                    Cache.set("fasyankes", json.data);
+                    PortalAPI.renderFasyankes(json.data);
+                }
+            })
+            .catch(function(err) {
+                Log.warn("Gagal load data fasyankes:", err);
+            });
+    },
+
+    renderFasyankes: function(items) {
+        var container = DOM.id("fasyankesContainer");
+        if (!container) {
+            // Fallback: update elemen individual jika container tidak ada
+            items.forEach(function(item) {
+                var el = null;
+                var nama = item.nama || item.nama_item || '';
+                if (nama.toLowerCase() === 'puskesmas') el = DOM.id("statFasyankesPuskesmas");
+                else if (nama.toLowerCase() === 'pustu') el = DOM.id("statFasyankesPustu");
+                else if (nama.toLowerCase() === 'klinik') el = DOM.id("statFasyankesKlinik");
+                else if (nama.toLowerCase() === 'rumah sakit') el = DOM.id("statFasyankesRS");
+                if (el) {
+                    Counter.start(el.id, item.nilai || 0);
+                }
+            });
+            return;
+        }
+        var html = '<table class="info-panel">';
+        items.forEach(function(item) {
+            var nama = item.nama || item.nama_item || '';
+            var nilai = item.nilai || 0;
+            html += '<tr><td>' + nama + '</td><td>' + Util.number(nilai) + '</td></tr>';
+        });
+        html += '</table>';
+        container.innerHTML = html;
+    },
+
     
 
     renderDashboard: function(data) {
@@ -1447,6 +1494,8 @@ const PortalAPI = {
         Counter.start("statPustu", data.pustu);
         Counter.start("statProgram", data.program);
     },
+
+
 
     /* ==========================================================
        DATA KECAMATAN
@@ -1676,7 +1725,7 @@ const Startup = {
 
         Core.init();
         Header.init();
-        Visual.init();
+    
         Orbit.init();
         OrbitMenu.init();
         DiseaseOrbit.init();
@@ -1711,3 +1760,4 @@ window.addEventListener("load", function() {
 ========================================================== */
 
 Log.info("app_v2.js loaded successfully.");
+
