@@ -299,100 +299,7 @@ const Header = {
     }
 };
 
-/* ==========================================================
-   BAGIAN 3 - VISUAL ENGINE
-========================================================== */
-
-const MouseGlow = {
-    glow: null,
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-    cx: window.innerWidth / 2,
-    cy: window.innerHeight / 2,
-    init: function() {
-        this.glow = DOM.id("mouseGlow");
-        if (!this.glow) return;
-        document.addEventListener("mousemove", function(e) {
-            MouseGlow.x = e.clientX;
-            MouseGlow.y = e.clientY;
-        });
-        MouseGlow.animate();
-    },
-    animate: function() {
-        if (!MouseGlow.glow) return;
-        MouseGlow.cx += (MouseGlow.x - MouseGlow.cx) * 0.15;
-        MouseGlow.cy += (MouseGlow.y - MouseGlow.cy) * 0.15;
-        MouseGlow.glow.style.left = MouseGlow.cx + "px";
-        MouseGlow.glow.style.top = MouseGlow.cy + "px";
-        requestAnimationFrame(MouseGlow.animate);
-    }
-};
-
-const GlassCard = {
-    init: function() {
-        DOM.all(".glass-card").forEach(function(card) {
-            card.style.transition = "transform .25s ease";
-            card.addEventListener("mouseenter", function() {
-                card.style.transform = "translateY(-8px) scale(1.03)";
-            });
-            card.addEventListener("mouseleave", function() {
-                card.style.transform = "";
-            });
-        });
-    }
-};
-
-const Parallax = {
-    init: function() {
-        const map = DOM.id("mapContainer") || DOM.id("map-container");
-        if (!map) return;
-        document.addEventListener("mousemove", function(e) {
-            const x = (window.innerWidth / 2 - e.clientX) / 80;
-            const y = (window.innerHeight / 2 - e.clientY) / 80;
-            map.style.transform = "perspective(1800px) " + "rotateX(" + y + "deg) rotateY(" + (-x) + "deg)";
-        });
-    }
-};
-
-const ButtonFX = {
-    init: function() {
-        DOM.all(".btn,.orbit-item").forEach(function(btn) {
-            btn.style.transition = "all .25s ease";
-            btn.addEventListener("mouseenter", function() {
-                btn.style.transform = "scale(1.08)";
-            });
-            btn.addEventListener("mouseleave", function() {
-                btn.style.transform = "";
-            });
-        });
-    }
-};
-
-const Intro = {
-    init: function() {
-        if (typeof gsap === "undefined") {
-            return;
-        }
-        window.addEventListener("load", function() {
-            const tl = gsap.timeline();
-            tl.from(".top-header", { opacity: 0, y: -60, duration: .8 })
-              .from(".left-panel", { opacity: 0, x: -80, duration: .7 }, "-=.4")
-              .from(".right-panel", { opacity: 0, x: 80, duration: .7 }, "-=.5")
-              .from(".map-stage", { scale: .9, opacity: 0, duration: 1 }, "-=.5")
-              .from(".bottom-bar", { opacity: 0, y: 60, duration: .6 }, "-=.5");
-        });
-    }
-};
-
-const Visual = {
-    init: function() {
-        MouseGlow.init();
-        GlassCard.init();
-        Parallax.init();
-        ButtonFX.init();
-        Intro.init();
-    }
-};
+;
 
 /* ==========================================================
    BAGIAN 4 - ORBIT ENGINE
@@ -401,9 +308,9 @@ const Visual = {
 const Orbit = {
     menu: null,
     items: [],
-    radius: 340,
-    centerX: 300,
-    centerY: 300,
+radius: 260,
+centerX: 270,
+centerY: 270,
     angle: 0,
     speed: 0.004,
     running: true,
