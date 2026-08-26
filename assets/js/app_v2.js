@@ -5,6 +5,10 @@
    DINAS KESEHATAN KABUPATEN SUKOHARJO
    app_v2.js
    Version 3.2 - Fixed Interactive Map + Disease Orbit
+   Version 3.2.1 - FIX: pin/tooltip klik peta sekarang mengikuti
+                   posisi cursor dengan benar (koordinat SVG
+                   di dalam <object> dikonversi ke koordinat
+                   halaman utama)
 ========================================================== */
 
 /* ==========================================================
@@ -12,7 +16,7 @@
 ========================================================== */
 
 const Portal = {
-    version: "3.2.0",
+    version: "3.2.1",
     build: "2026.08",
     debug: true,
     online: navigator.onLine,
@@ -629,6 +633,34 @@ const MapEngine = {
         const self = this;
 
 
+        /* ======================================================
+           HELPER: KONVERSI KOORDINAT DI DALAM <object>
+           MENJADI KOORDINAT HALAMAN UTAMA (VIEWPORT).
+
+           PENTING:
+           e.clientX / e.clientY dari event di dalam SVG
+           yang dimuat lewat <object> itu RELATIF terhadap
+           document SVG itu sendiri (viewport-nya sendiri),
+           BUKAN terhadap window/document utama.
+
+           Makanya harus ditambah posisi <object> di halaman
+           utama (getBoundingClientRect) supaya pin/tooltip
+           muncul PERSIS di titik cursor, bukan di posisi lain
+           (misalnya nyangkut di kiri map).
+        ====================================================== */
+
+        const toPageCoords = function(evt) {
+
+            const objRect =
+                obj.getBoundingClientRect();
+
+            return {
+                x: objRect.left + evt.clientX,
+                y: objRect.top + evt.clientY
+            };
+        };
+
+
         const attachEvents = function(svg) {
 
             if (!svg) return;
@@ -713,16 +745,50 @@ const MapEngine = {
                     );
 
 
+                    /*
+                     * Konversi posisi klik (di dalam SVG)
+                     * ke posisi halaman utama, supaya pin
+                     * muncul tepat di titik yang diklik.
+                     */
+
+                    const pagePos =
+                        toPageCoords(e);
+
+
                     document.dispatchEvent(
                         new CustomEvent(
                             "district-click",
                             {
                                 detail: {
                                     id: id,
-                                    nama: nama
+                                    nama: nama,
+                                    x: pagePos.x,
+                                    y: pagePos.y
                                 }
                             }
                         )
+                    );
+                }
+            );
+
+
+            /* ==================================================
+               MOUSEMOVE (supaya tooltip tetap mengikuti
+               cursor SELAMA di dalam area peta, karena
+               mousemove di document utama tidak bisa
+               "menembus" ke dalam <object>)
+            ================================================== */
+
+            svg.addEventListener(
+                "mousemove",
+                function(e) {
+
+                    const pagePos =
+                        toPageCoords(e);
+
+                    MapEngine.moveTooltip(
+                        pagePos.x,
+                        pagePos.y
                     );
                 }
             );
@@ -1041,12 +1107,25 @@ const MapEngine = {
 
 
         /*
-         * Tooltip
+         * Tooltip - langsung dipasang di titik klik
+         * (data.x / data.y sudah dikonversi ke koordinat
+         * halaman utama di bindSVG)
          */
 
         this.showTooltip(
             data.nama
         );
+
+        if (
+            typeof data.x === "number" &&
+            typeof data.y === "number"
+        ) {
+
+            this.moveTooltip(
+                data.x,
+                data.y
+            );
+        }
 
 
         /*
@@ -1351,6 +1430,11 @@ const MapEngine = {
 
 /* ==========================================================
    TOOLTIP FOLLOW MOUSE
+   (untuk area DI LUAR <object> peta - misal saat hover di
+   panel kiri/kanan. Untuk area DI DALAM peta, sudah ditangani
+   listener mousemove terpisah di dalam bindSVG di atas,
+   karena document di dalam <object> terpisah dari document
+   utama ini.)
 ========================================================== */
 
 document.addEventListener("mousemove", function(e) {

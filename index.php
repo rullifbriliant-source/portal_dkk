@@ -1,4 +1,4 @@
-    <?php
+ <?php
     date_default_timezone_set('Asia/Jakarta');
     ?>
     <!DOCTYPE html>
@@ -405,109 +405,155 @@
     ======================================================= -->
 
     <section
-    class="right-panel"
-    id="rightPanel">
+        class="right-panel"
+        id="rightPanel">
 
-    <div class="glass-card">
+        <!-- FASYANKES -->
+        <div class="glass-card">
 
-    <h4>
+            <h4>
+                <i class="fas fa-hospital"></i>
+                Fasyankes
+            </h4>
 
-    <i class="fas fa-bullhorn"></i>
+            <table class="info-panel">
+                <tr>
+                    <td>Puskesmas</td>
+                    <td>12</td>
+                </tr>
+                <tr>
+                    <td>Pustu</td>
+                    <td>24</td>
+                </tr>
+                <tr>
+                    <td>Klinik</td>
+                    <td>18</td>
+                </tr>
+                <tr>
+                    <td>Rumah Sakit</td>
+                    <td>8</td>
+                </tr>
+            </table>
 
-    Informasi Hari Ini
+        </div>
 
-    </h4>
+        <!-- SDKM -->
+        <div class="glass-card">
 
-    <div
-    id="agendaHariIni"
-    class="agenda-container">
+            <h4>
+                <i class="fas fa-user-doctor"></i>
+                SDKM
+            </h4>
 
-    Memuat agenda...
+            <table class="info-panel">
+                <tr>
+                    <td>Dokter</td>
+                    <td>85</td>
+                </tr>
+                <tr>
+                    <td>Perawat</td>
+                    <td>320</td>
+                </tr>
+                <tr>
+                    <td>Bidan</td>
+                    <td>210</td>
+                </tr>
+                <tr>
+                    <td>Nakes Lainnya</td>
+                    <td>145</td>
+                </tr>
+            </table>
 
-    </div>
+        </div>
 
-    </div>
+        <!-- DATA DASAR -->
+        <div class="glass-card">
 
-    <div class="glass-card">
+            <h4>
+                <i class="fas fa-circle-nodes"></i>
+                Data Dasar
+            </h4>
 
-    <h4>
+            <table class="info-panel">
+                <tr>
+                    <td>Kecamatan</td>
+                    <td id="namaKecamatan">Kabupaten Sukoharjo</td>
+                </tr>
+                <tr>
+                    <td>Desa / Kelurahan</td>
+                    <td id="jumlahDesa">-</td>
+                </tr>
+                <tr>
+                    <td>Penduduk</td>
+                    <td id="jumlahPenduduk">-</td>
+                </tr>
+                <tr>
+                    <td>Puskesmas</td>
+                    <td id="jumlahPuskesmas">-</td>
+                </tr>
+                <tr>
+                    <td>Pustu</td>
+                    <td id="jumlahPustu">-</td>
+                </tr>
+                <tr>
+                    <td>Posyandu</td>
+                    <td id="jumlahPosyandu">-</td>
+                </tr>
+            </table>
 
-    <i class="fas fa-chart-pie"></i>
+        </div>
+                <!-- 10 PENYAKIT POPULER -->
+        <div class="glass-card">
 
-    Statistik Cepat
+            <h4>
+                <i class="fas fa-virus"></i>
+                10 Penyakit Populer
+            </h4>
 
-    </h4>
+            <table class="info-panel">
+                <tr>
+                    <td>1. ISPA</td>
+                    <td>1.540</td>
+                </tr>
+                <tr>
+                    <td>2. Hipertensi</td>
+                    <td>1.230</td>
+                </tr>
+                <tr>
+                    <td>3. COVID-19</td>
+                    <td>1.100</td>
+                </tr>
+                <tr>
+                    <td>4. Diare</td>
+                    <td>890</td>
+                </tr>
+                <tr>
+                    <td>5. Gastritis</td>
+                    <td>760</td>
+                </tr>
+                <tr>
+                    <td>6. TBC</td>
+                    <td>640</td>
+                </tr>
+                <tr>
+                    <td>7. Diabetes Melitus</td>
+                    <td>510</td>
+                </tr>
+                <tr>
+                    <td>8. Dermatitis</td>
+                    <td>430</td>
+                </tr>
+                <tr>
+                    <td>9. Rematik</td>
+                    <td>350</td>
+                </tr>
+                <tr>
+                    <td>10. Demam Berdarah</td>
+                    <td>210</td>
+                </tr>
+            </table>
 
-    <table class="info-panel">
-
-    <tr>
-
-    <td>Puskesmas</td>
-
-    <td id="statPuskesmas">12</td>
-
-    </tr>
-
-    <tr>
-
-    <td>Pustu</td>
-
-    <td id="statPustu">-</td>
-
-    </tr>
-
-    <tr>
-
-    <td>Posyandu</td>
-
-    <td id="statPosyandu">-</td>
-
-    </tr>
-
-    <tr>
-
-    <td>Pegawai</td>
-
-    <td id="statPegawai">-</td>
-
-    </tr>
-
-    </table>
-
-    </div>
-
-    <div class="glass-card info-panel">
-        <h4>
-            <i class="fas fa-circle-nodes"></i>
-            Data Dasar
-        </h4>
-        <table>
-            <tr>
-                <td>Kecamatan</td>
-                <td id="namaKecamatan">Kabupaten Sukoharjo</td>
-            </tr>
-            <tr>
-                <td>Desa / Kelurahan</td>
-                <td id="jumlahDesa">-</td>
-            </tr>
-            <tr>
-                <td>Penduduk</td>
-                <td id="jumlahPenduduk">-</td>
-            </tr>
-            <tr>
-                <td>Puskesmas</td>
-                <td id="jumlahPuskesmas">-</td>
-            </tr>
-            <tr>
-                <td>Pustu</td>
-                <td id="jumlahPustu">-</td>
-            </tr>
-            <tr>
-                <td>Posyandu</td>
-                <td id="jumlahPosyandu">-</td>
-            </tr>
-        </table>
-    </div>
+        </div>
 
     </section>
 
