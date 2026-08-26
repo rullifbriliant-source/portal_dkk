@@ -40,6 +40,8 @@ if (isset($_GET['delete'])) {
     header("Location: fasyankes.php");
     exit;
 }
+
+$username = $_SESSION['admin_username'] ?? 'Admin';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -52,7 +54,7 @@ if (isset($_GET['delete'])) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
-        /* ===== SIDEBAR (sama seperti sebelumnya) ===== */
+        /* ===== SIDEBAR ===== */
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Poppins',sans-serif; background:#061426; min-height:100vh; display:flex; color:#fff; }
         .sidebar {
@@ -106,7 +108,7 @@ if (isset($_GET['delete'])) {
 </head>
 <body>
 
-  <!-- SIDEBAR -->
+<!-- SIDEBAR (diperbaiki link SDM) -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <img src="../../assets/img/kabupaten.png" alt="Logo">
@@ -115,14 +117,14 @@ if (isset($_GET['delete'])) {
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php" class="active"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="../sdm.php"><i class="fas fa-users"></i> SDM</a></li>      <!-- pakai ../ -->
-        <li><a href="../penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
-        <li><a href="../data_dasar.php"><i class="fas fa-map"></i> Data Dasar</a></li>
+        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>   <!-- path sudah benar (satu folder) -->
+        <li><a href="#"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="#"><i class="fas fa-map"></i> Data Dasar</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
 
-<!-- MAIN -->
+<!-- MAIN CONTENT -->
 <div class="main-content">
     <div class="page-header">
         <div>
@@ -152,7 +154,6 @@ if (isset($_GET['delete'])) {
         </form>
     </div>
 
-
     <!-- TABEL LIST -->
     <div class="card">
         <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar Fasilitas</h3>
@@ -169,7 +170,6 @@ if (isset($_GET['delete'])) {
                     <td><?php echo number_format($item['nilai']); ?></td>
                     <td><?php echo $item['urutan']; ?></td>
                     <td>
-                        <!-- Edit modal / inline edit -->
                         <form method="POST" style="display:inline-block;">
                             <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                             <input type="text" name="nama_item" value="<?php echo htmlspecialchars($item['nama_item']); ?>" style="width:120px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;color:#fff;">

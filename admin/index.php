@@ -440,9 +440,9 @@ if (empty($itemsSdm)) {
                     <?php endif; ?>
                 </table>
 
-                <a href="crud/fasyankes.php" class="btn-edit">
-                    <i class="fas fa-pen"></i> Kelola Fasyankes
-                </a>
+<a href="crud/fasyankes.php" class="btn-edit">
+    <i class="fas fa-pen"></i> Kelola Fasyankes
+</a>
             </div>
 
            <!-- ==================================================
@@ -471,9 +471,9 @@ if (empty($itemsSdm)) {
             <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);padding:10px 0;">Belum ada data</td></tr>
         <?php endif; ?>
     </table>
-    <a href="crud/sdm.php" class="btn-edit">
-        <i class="fas fa-pen"></i> Kelola SDM
-    </a>
+<a href="crud/sdm.php" class="btn-edit">
+    <i class="fas fa-pen"></i> Kelola SDM
+</a>
 </div>
             <!-- ==================================================
             PENYAKIT
