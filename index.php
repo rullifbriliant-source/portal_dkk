@@ -409,17 +409,29 @@
         id="rightPanel">
 
 <!-- FASYANKES -->
-<!-- FASYANKES -->
 <div class="glass-card">
     <h4>
         <i class="fas fa-hospital"></i>
         Fasyankes
     </h4>
-    <div id="fasyankesContainer">
-        <table class="info-panel">
-            <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);">Memuat data...</td></tr>
-        </table>
-    </div>
+    <table class="info-panel">
+        <tr>
+            <td>Puskesmas</td>
+            <td id="statFasyankesPuskesmas">-</td>
+        </tr>
+        <tr>
+            <td>Pustu</td>
+            <td id="statFasyankesPustu">-</td>
+        </tr>
+        <tr>
+            <td>Klinik</td>
+            <td id="statFasyankesKlinik">-</td>
+        </tr>
+        <tr>
+            <td>Rumah Sakit</td>
+            <td id="statFasyankesRS">-</td>
+        </tr>
+    </table>
 </div>
 
        <!-- SDM -->

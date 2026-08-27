@@ -1,10 +1,7 @@
 <?php
 require_once '../config.php';
 requireLogin();
-
-// ============================================================
-// AMBIL DATA SDM ITEMS
-// ============================================================
+$current_page = basename($_SERVER['PHP_SELF']);
 
 $items = [];
 $query = mysqli_query($config, "SELECT * FROM tbl_sdm_items WHERE aktif='Y' ORDER BY urutan");
@@ -352,11 +349,11 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
     </div>
     <ul class="sidebar-menu">
-        <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-        <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM</a></li>
-        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
-        <li><a href="#"><i class="fas fa-map"></i> Data Dasar</a></li>
+        <li><a href="../index.php" class="<?= ($current_page == 'index.php') ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="fasyankes.php" class="<?= ($current_page == 'fasyankes.php') ? 'active' : '' ?>"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="sdm.php" class="<?= ($current_page == 'sdm.php') ? 'active' : '' ?>"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="kecamatan.php" class="<?= ($current_page == 'kecamatan.php') ? 'active' : '' ?>"><i class="fas fa-map"></i> Kecamatan</a></li>
+        <li><a href="penyakit.php" class="<?= ($current_page == 'penyakit.php') ? 'active' : '' ?>"><i class="fas fa-disease"></i> Penyakit</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>

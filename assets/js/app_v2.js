@@ -1367,7 +1367,7 @@ const PortalAPI = {
         this.loadRunning();
         this.loadAgenda();
         this.loadDashboard();
-        this.loadFasyankes();  
+        // this.loadFasyankes();  
         this.loadSdm();
         this.loadPenyakit();
     },
@@ -1735,21 +1735,26 @@ const Dashboard = {
         this.renderData(json);
     },
 
-    renderData: function(data) {
-        var d = data.data && data.data.length > 0 ? data.data[0] : data;
+renderData: function(data) {
+    var d = data.data && data.data.length > 0 ? data.data[0] : data;
 
-        Log.info("Render data:", d);
+    Log.info("Render data:", d);
 
-        this.setText("namaKecamatan", d.nama || d.nama_kecamatan || "-");
-        this.setNumber("jumlahPenduduk", d.penduduk || d.jumlah_penduduk || 0);
-        this.setNumber("jumlahKK", d.kk || d.jumlah_kk || 0);
-        this.setNumber("jumlahPuskesmas", d.puskesmas || d.jumlah_puskesmas || 0);
-        this.setNumber("jumlahPustu", d.pustu || d.jumlah_pustu || 0);
-        this.setNumber("jumlahPosyandu", d.posyandu || d.jumlah_posyandu || 0);
-        this.setNumber("jumlahDesa", d.desa || d.jumlah_desa || 0);
+    // ===== DATA DASAR =====
+    this.setText("namaKecamatan", d.nama || d.nama_kecamatan || "-");
+    this.setNumber("jumlahPenduduk", d.penduduk || d.jumlah_penduduk || 0);
+    this.setNumber("jumlahKK", d.kk || d.jumlah_kk || 0);
+    this.setNumber("jumlahPuskesmas", d.puskesmas || d.jumlah_puskesmas || 0);
+    this.setNumber("jumlahPustu", d.pustu || d.jumlah_pustu || 0);
+    this.setNumber("jumlahPosyandu", d.posyandu || d.jumlah_posyandu || 0);
+    this.setNumber("jumlahDesa", d.desa || d.jumlah_desa || 0);
+    this.setNumber("statFasyankesPuskesmas", d.puskesmas || d.jumlah_puskesmas || 0);
+    this.setNumber("statFasyankesPustu", d.pustu || d.jumlah_pustu || 0);
+    this.setNumber("statFasyankesKlinik", d.klinik || d.jumlah_klinik || 0);
+    this.setNumber("statFasyankesRS", d.rumah_sakit || d.jumlah_rumah_sakit || 0);
 
-        this.lastData = d;
-    },
+    this.lastData = d;
+},
 
     showLoading: function() {
         this.loading = true;
@@ -1811,12 +1816,18 @@ const Startup = {
         MapEngine.init();
         Dashboard.init();
         PortalAPI.init();
+        PortalAPI.loadFasyankes(); 
 
         Log.info("%cPORTAL TERPADU DKK SUKOHARJO", "color:#00d4ff;font-size:16px;font-weight:bold");
         Log.info("Version : " + Portal.version);
         Log.info("Startup selesai.");
     }
+
+    
 };
+
+
+
 
 /* ==========================================================
    DOM READY
