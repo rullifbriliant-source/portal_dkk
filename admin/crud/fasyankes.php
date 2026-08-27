@@ -115,9 +115,9 @@ if (isset($_GET['delete'])) {
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php" class="active"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="../sdm.php"><i class="fas fa-users"></i> SDM</a></li>      <!-- pakai ../ -->
-        <li><a href="../penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
-        <li><a href="../data_dasar.php"><i class="fas fa-map"></i> Data Dasar</a></li>
+        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="#"><i class="fas fa-map"></i> Data Dasar</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
@@ -138,7 +138,7 @@ if (isset($_GET['delete'])) {
         <form method="POST" class="form-inline">
             <div class="form-group">
                 <label>Nama Fasilitas</label>
-                <input type="text" name="nama_item" placeholder="Contoh: Pos Ronda" required>
+                <input type="text" name="nama_item" placeholder="Contoh: Apotek" required>
             </div>
             <div class="form-group">
                 <label>Jumlah</label>

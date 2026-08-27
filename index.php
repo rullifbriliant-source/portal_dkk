@@ -472,57 +472,21 @@
 
         </div>
                 <!-- 10 PENYAKIT POPULER -->
-        <div class="glass-card">
-
-            <h4>
-                <i class="fas fa-virus"></i>
-                10 Penyakit Populer
-            </h4>
-
-            <table class="info-panel">
-                <tr>
-                    <td>1. ISPA</td>
-                    <td>1.540</td>
-                </tr>
-                <tr>
-                    <td>2. Hipertensi</td>
-                    <td>1.230</td>
-                </tr>
-                <tr>
-                    <td>3. COVID-19</td>
-                    <td>1.100</td>
-                </tr>
-                <tr>
-                    <td>4. Diare</td>
-                    <td>890</td>
-                </tr>
-                <tr>
-                    <td>5. Gastritis</td>
-                    <td>760</td>
-                </tr>
-                <tr>
-                    <td>6. TBC</td>
-                    <td>640</td>
-                </tr>
-                <tr>
-                    <td>7. Diabetes Melitus</td>
-                    <td>510</td>
-                </tr>
-                <tr>
-                    <td>8. Dermatitis</td>
-                    <td>430</td>
-                </tr>
-                <tr>
-                    <td>9. Rematik</td>
-                    <td>350</td>
-                </tr>
-                <tr>
-                    <td>10. Demam Berdarah</td>
-                    <td>210</td>
-                </tr>
-            </table>
-
-        </div>
+<div class="glass-card">
+    <h4>
+        <i class="fas fa-virus"></i>
+        10 Penyakit Populer
+    </h4>
+    <div id="penyakitContainer">
+        <table class="info-panel">
+            <tr>
+                <td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);">
+                    <i class="fas fa-spinner fa-spin"></i> Memuat data...
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
 
     </section>
 
