@@ -3,11 +3,11 @@ require_once '../config.php';
 requireLogin();
 
 // ============================================================
-// AMBIL DATA SDM ITEMS
+// AMBIL DATA PENYAKIT ITEMS
 // ============================================================
 
 $items = [];
-$query = mysqli_query($config, "SELECT * FROM tbl_sdm_items WHERE aktif='Y' ORDER BY urutan");
+$query = mysqli_query($config, "SELECT * FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY urutan");
 while ($row = mysqli_fetch_assoc($query)) {
     $items[] = $row;
 }
@@ -22,15 +22,15 @@ if (isset($_POST['add'])) {
     $urutan = (int)$_POST['urutan'];
     
     if (!empty($nama)) {
-        $check = mysqli_query($config, "SELECT id FROM tbl_sdm_items WHERE nama_item = '$nama'");
+        $check = mysqli_query($config, "SELECT id FROM tbl_penyakit_items WHERE nama_item = '$nama'");
         if (mysqli_num_rows($check) == 0) {
-            mysqli_query($config, "INSERT INTO tbl_sdm_items (nama_item, nilai, urutan) VALUES ('$nama', $nilai, $urutan)");
+            mysqli_query($config, "INSERT INTO tbl_penyakit_items (nama_item, nilai, urutan) VALUES ('$nama', $nilai, $urutan)");
             $success = "Item '$nama' berhasil ditambahkan!";
         } else {
             $error = "Item '$nama' sudah ada!";
         }
     }
-    header("Location: sdm.php");
+    header("Location: penyakit.php");
     exit;
 }
 
@@ -44,13 +44,13 @@ if (isset($_POST['edit'])) {
     $nilai = (int)$_POST['nilai'];
     $urutan = (int)$_POST['urutan'];
     
-    mysqli_query($config, "UPDATE tbl_sdm_items SET 
+    mysqli_query($config, "UPDATE tbl_penyakit_items SET 
         nama_item='$nama', 
         nilai=$nilai, 
         urutan=$urutan 
         WHERE id=$id");
     
-    header("Location: sdm.php");
+    header("Location: penyakit.php");
     exit;
 }
 
@@ -60,8 +60,8 @@ if (isset($_POST['edit'])) {
 
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
-    mysqli_query($config, "UPDATE tbl_sdm_items SET aktif='N' WHERE id=$id");
-    header("Location: sdm.php");
+    mysqli_query($config, "UPDATE tbl_penyakit_items SET aktif='N' WHERE id=$id");
+    header("Location: penyakit.php");
     exit;
 }
 
@@ -72,7 +72,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelola SDM - Admin DKK</title>
+    <title>Kelola Penyakit - Admin DKK</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -326,13 +326,32 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
             border-color: #00d4ff;
         }
         .form-inline-edit .input-name {
-            width: 120px;
+            width: 150px;
         }
         .form-inline-edit .input-value {
-            width: 70px;
+            width: 80px;
         }
         .form-inline-edit .input-order {
             width: 60px;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .alert-success {
+            background: rgba(0,212,255,0.12);
+            border: 1px solid rgba(0,212,255,0.2);
+            color: #72e8ff;
+        }
+        .alert-error {
+            background: rgba(255,82,82,0.12);
+            border: 1px solid rgba(255,82,82,0.2);
+            color: #ff6b6b;
         }
 
         @media (max-width: 768px) {
@@ -354,8 +373,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM</a></li>
-        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="penyakit.php" class="active"><i class="fas fa-disease"></i> Penyakit</a></li>
         <li><a href="#"><i class="fas fa-map"></i> Data Dasar</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
@@ -365,22 +384,30 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 <div class="main-content">
     <div class="page-header">
         <div>
-            <h1>Kelola SDM Kesehatan</h1>
-            <p>Tambah, edit, atau hapus data sumber daya manusia</p>
+            <h1>Kelola 10 Penyakit Populer</h1>
+            <p>Tambah, edit, atau hapus data penyakit yang ditampilkan di portal utama</p>
         </div>
         <a href="../index.php" class="back-link"><i class="fas fa-arrow-left"></i> Kembali</a>
     </div>
 
+    <!-- ALERT -->
+    <?php if (isset($success)): ?>
+    <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= $success ?></div>
+    <?php endif; ?>
+    <?php if (isset($error)): ?>
+    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> <?= $error ?></div>
+    <?php endif; ?>
+
     <!-- FORM TAMBAH -->
     <div class="card">
-        <h3><i class="fas fa-plus-circle" style="color:#00d4ff;margin-right:10px;"></i>Tambah Item SDM</h3>
+        <h3><i class="fas fa-plus-circle" style="color:#00d4ff;margin-right:10px;"></i>Tambah Penyakit</h3>
         <form method="POST" class="form-inline">
             <div class="form-group">
-                <label>Nama Profesi</label>
-                <input type="text" name="nama_item" placeholder="Contoh: Dokter Gigi" required>
+                <label>Nama Penyakit</label>
+                <input type="text" name="nama_item" placeholder="Contoh: Demam Berdarah" required>
             </div>
             <div class="form-group">
-                <label>Jumlah</label>
+                <label>Jumlah Kasus</label>
                 <input type="number" name="nilai" value="0" min="0">
             </div>
             <div class="form-group">
@@ -393,13 +420,13 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 
     <!-- TABEL LIST -->
     <div class="card">
-        <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar SDM</h3>
+        <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar Penyakit Populer</h3>
         <table>
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Nama Profesi</th>
-                    <th>Jumlah</th>
+                    <th>Nama Penyakit</th>
+                    <th>Jumlah Kasus</th>
                     <th>Urutan</th>
                     <th>Aksi</th>
                 </tr>
@@ -420,14 +447,14 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                             <input type="number" name="urutan" value="<?php echo $item['urutan']; ?>" class="input-order">
                             <button type="submit" name="edit" class="btn-icon"><i class="fas fa-pen"></i> Edit</button>
                         </form>
-                        <a href="?delete=<?php echo $item['id']; ?>" class="btn-icon btn-danger" onclick="return confirm('Hapus item ini?')"><i class="fas fa-trash"></i> Hapus</a>
+                        <a href="?delete=<?php echo $item['id']; ?>" class="btn-icon btn-danger" onclick="return confirm('Hapus penyakit ini?')"><i class="fas fa-trash"></i> Hapus</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php else: ?>
                 <tr>
                     <td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">
-                        <i class="fas fa-database"></i> Belum ada data SDM
+                        <i class="fas fa-database"></i> Belum ada data penyakit
                     </td>
                 </tr>
                 <?php endif; ?>

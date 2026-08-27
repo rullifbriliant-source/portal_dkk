@@ -54,6 +54,37 @@ if (mysqli_num_rows($checkTablePenyakit) > 0) {
 }
 
 // ============================================================
+// AMBIL DATA PENYAKIT ITEMS (dari tbl_penyakit_items)
+// ============================================================
+
+$itemsPenyakit = [];
+$checkTablePenyakitItems = mysqli_query($config, "SHOW TABLES LIKE 'tbl_penyakit_items'");
+if (mysqli_num_rows($checkTablePenyakitItems) > 0) {
+    $queryPenyakitItems = mysqli_query($config, "SELECT nama_item, nilai FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY urutan LIMIT 20");
+    while ($row = mysqli_fetch_assoc($queryPenyakitItems)) {
+        $itemsPenyakit[] = $row;
+    }
+}
+$penyakitCount = count($itemsPenyakit);
+
+// Jika belum ada data, default
+if (empty($itemsPenyakit)) {
+    $itemsPenyakit = [
+        ['nama_item' => 'ISPA', 'nilai' => 1540],
+        ['nama_item' => 'Hipertensi', 'nilai' => 1230],
+        ['nama_item' => 'COVID-19', 'nilai' => 1100],
+        ['nama_item' => 'Diare', 'nilai' => 890],
+        ['nama_item' => 'Gastritis', 'nilai' => 760],
+        ['nama_item' => 'TBC', 'nilai' => 640],
+        ['nama_item' => 'Diabetes', 'nilai' => 510],
+        ['nama_item' => 'Asma', 'nilai' => 430],
+        ['nama_item' => 'Pneumonia', 'nilai' => 380],
+        ['nama_item' => 'Demam Berdarah', 'nilai' => 320]
+    ];
+    $penyakitCount = count($itemsPenyakit);
+}
+
+// ============================================================
 // AMBIL DATA SDM ITEMS
 // ============================================================
 
@@ -77,6 +108,8 @@ if (empty($itemsSdm)) {
     ];
     $sdmCount = count($itemsSdm);
 }
+
+
 
 ?>
 <!DOCTYPE html>
@@ -475,42 +508,64 @@ if (empty($itemsSdm)) {
     <i class="fas fa-pen"></i> Kelola SDM
 </a>
 </div>
-            <!-- ==================================================
-            PENYAKIT
-            =================================================== -->
-            <div class="card-editor">
-                <div class="card-title">
-                    <div class="card-title-left">
-                        <i class="fas fa-virus"></i>
-                        <div>
-                            <h3>Data Penyakit</h3>
-                            <p>Data penyakit terbanyak</p>
-                        </div>
-                    </div>
-                    <span class="badge badge-warning">SEGERA</span>
-                </div>
-
-                <table>
-                    <?php if (count($penyakitList) > 0): ?>
-                        <?php foreach ($penyakitList as $p): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($p['nama_penyakit']) ?></td>
-                                <td><?= number_format((int)$p['total_kasus'], 0, ',', '.') ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);padding:12px 0;">
-                                <i class="fas fa-database"></i> Belum ada data penyakit
-                            </td>
-                        </tr>
-                    <?php endif; ?>
-                </table>
-
-                <a href="#" class="btn-edit btn-disabled">
-                    <i class="fas fa-pen"></i> Edit Data Penyakit
-                </a>
+       <!-- ==================================================
+     PENYAKIT POPULER (dinamis dari tbl_penyakit_items)
+================================================== -->
+<div class="card-editor" id="penyakitCard">
+    <div class="card-title">
+        <div class="card-title-left">
+            <i class="fas fa-virus"></i>
+            <div>
+                <h3>Data Penyakit</h3>
+                <p>Data penyakit terbanyak</p>
             </div>
+        </div>
+        <span class="badge"><?= $penyakitCount ?? 0 ?> item</span>
+    </div>
+    
+    <table id="penyakitTable">
+        <?php if (isset($itemsPenyakit) && count($itemsPenyakit) > 0): ?>
+            <?php 
+            $limit = 5;
+            $total = count($itemsPenyakit);
+            $showAll = isset($_GET['show_all_penyakit']) && $_GET['show_all_penyakit'] == 1;
+            $displayItems = $showAll ? $itemsPenyakit : array_slice($itemsPenyakit, 0, $limit);
+            ?>
+            <?php foreach ($displayItems as $index => $item): ?>
+            <tr>
+                <td><?= ($index+1) . '. ' . htmlspecialchars($item['nama_item']) ?></td>
+                <td><?= number_format((int)$item['nilai']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if ($total > $limit && !$showAll): ?>
+            <tr id="showMoreRow">
+                <td colspan="2" style="text-align:center;padding:8px 0;">
+                    <a href="?show_all_penyakit=1#penyakitCard" 
+                       style="color:#00d4ff;text-decoration:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:8px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);transition:0.3s;">
+                        <i class="fas fa-chevron-down"></i> Tampilkan <?= $total - $limit ?> penyakit lainnya
+                    </a>
+                </td>
+            </tr>
+            <?php endif; ?>
+            <?php if ($showAll): ?>
+            <tr id="hideShowRow">
+                <td colspan="2" style="text-align:center;padding:8px 0;">
+                    <a href="?show_all_penyakit=0#penyakitCard" 
+                       style="color:rgba(255,255,255,0.5);text-decoration:none;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);transition:0.3s;">
+                        <i class="fas fa-chevron-up"></i> Sembunyikan
+                    </a>
+                </td>
+            </tr>
+            <?php endif; ?>
+        <?php else: ?>
+            <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.3);padding:10px 0;">Belum ada data</td></tr>
+        <?php endif; ?>
+    </table>
+    
+    <a href="crud/penyakit.php" class="btn-edit">
+        <i class="fas fa-pen"></i> Edit Data Penyakit
+    </a>
+</div>
 
             <!-- ==================================================
             DATA DASAR

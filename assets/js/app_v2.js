@@ -1369,6 +1369,7 @@ const PortalAPI = {
         this.loadDashboard();
         this.loadFasyankes();  
         this.loadSdm();
+        this.loadPenyakit();
     },
     
 
@@ -1533,6 +1534,47 @@ renderSdm: function(items) {
     },
 
 
+    // ==========================================================
+// PENYAKIT POPULER
+// ==========================================================
+
+loadPenyakit: function() {
+    console.log("Penyakit dipanggil!");
+    var self = this;
+    // NONAKTIFKAN CACHE
+    this.fetchJSON("api/get_penyakit_populer.php?ts=" + Date.now())
+        .then(function(json) {
+            console.log("API Response:", json);
+            if (json.status) {
+                self.renderPenyakit(json.data);
+            }
+        })
+        .catch(function(err) {
+            console.error("Error:", err);
+            Log.warn("Gagal load data penyakit populer:", err);
+        });
+},
+
+renderPenyakit: function(items) {
+    console.log("renderPenyakit dipanggil, items:", items.length);
+    var container = DOM.id("penyakitContainer");
+    console.log("Container:", container);
+    if (!container) {
+        console.error("Container tidak ditemukan!");
+        return;
+    }
+    
+    var html = '<table class="info-panel">';
+    items.forEach(function(item, index) {
+        var nama = item.nama || item.nama_item || '';
+        var nilai = item.nilai || 0;
+        var no = (index + 1) + '. ';
+        html += '<tr><td>' + no + nama + '</td><td>' + Util.number(nilai) + '</td></tr>';
+    });
+    html += '</table>';
+    container.innerHTML = html;
+    console.log("HTML sudah di-render!");
+},
 
     /* ==========================================================
        DATA KECAMATAN
@@ -1797,4 +1839,6 @@ window.addEventListener("load", function() {
 ========================================================== */
 
 Log.info("app_v2.js loaded successfully.");
+
+
 
