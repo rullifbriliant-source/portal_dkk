@@ -7,6 +7,8 @@ requireLogin();
 
 require_once __DIR__ . '/../config/database.php';
 
+$current_page = basename($_SERVER['PHP_SELF']); // Untuk Sidebar Aktif
+
 $username = $_SESSION['admin_username'] ?? 'Admin';
 
 // Ambil data kecamatan

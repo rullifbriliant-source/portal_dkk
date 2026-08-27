@@ -9,6 +9,11 @@
                    posisi cursor dengan benar (koordinat SVG
                    di dalam <object> dikonversi ke koordinat
                    halaman utama)
+   Version 3.3.0 - FIX: panel SDM Kesehatan sekarang ikut
+                   ter-update per kecamatan saat peta diklik
+                   (sebelumnya cuma load total kabupaten sekali
+                   di awal, tidak pernah refresh saat ganti
+                   kecamatan)
 ========================================================== */
 
 /* ==========================================================
@@ -16,7 +21,7 @@
 ========================================================== */
 
 const Portal = {
-    version: "3.2.1",
+    version: "3.3.0",
     build: "2026.08",
     debug: true,
     online: navigator.onLine,
@@ -543,17 +548,6 @@ const MapEngine = {
         /* ======================================================
            HELPER: KONVERSI KOORDINAT DI DALAM <object>
            MENJADI KOORDINAT HALAMAN UTAMA (VIEWPORT).
-
-           PENTING:
-           e.clientX / e.clientY dari event di dalam SVG
-           yang dimuat lewat <object> itu RELATIF terhadap
-           document SVG itu sendiri (viewport-nya sendiri),
-           BUKAN terhadap window/document utama.
-
-           Makanya harus ditambah posisi <object> di halaman
-           utama (getBoundingClientRect) supaya pin/tooltip
-           muncul PERSIS di titik cursor, bukan di posisi lain
-           (misalnya nyangkut di kiri map).
         ====================================================== */
 
         const toPageCoords = function(evt) {
@@ -609,11 +603,6 @@ const MapEngine = {
 
                     let target = e.target;
 
-                    /*
-                     * Cari parent .district
-                     * sampai ketemu
-                     */
-
                     while (
                         target &&
                         target !== svg &&
@@ -652,12 +641,6 @@ const MapEngine = {
                     );
 
 
-                    /*
-                     * Konversi posisi klik (di dalam SVG)
-                     * ke posisi halaman utama, supaya pin
-                     * muncul tepat di titik yang diklik.
-                     */
-
                     const pagePos =
                         toPageCoords(e);
 
@@ -680,10 +663,7 @@ const MapEngine = {
 
 
             /* ==================================================
-               MOUSEMOVE (supaya tooltip tetap mengikuti
-               cursor SELAMA di dalam area peta, karena
-               mousemove di document utama tidak bisa
-               "menembus" ke dalam <object>)
+               MOUSEMOVE
             ================================================== */
 
             svg.addEventListener(
@@ -730,11 +710,6 @@ const MapEngine = {
                         return;
                     }
 
-
-                    /*
-                     * Kalau sedang aktif,
-                     * JANGAN ubah style.
-                     */
 
                     if (
                         target.classList.contains(
@@ -785,13 +760,6 @@ const MapEngine = {
                         return;
                     }
 
-
-                    /*
-                     * PENTING:
-                     *
-                     * Kalau wilayah sedang aktif,
-                     * JANGAN reset style.
-                     */
 
                     if (
                         target.classList.contains(
@@ -1004,20 +972,10 @@ const MapEngine = {
         );
 
 
-        /*
-         * Highlight permanen
-         */
-
         this.highlight(
             data.id
         );
 
-
-        /*
-         * Tooltip - langsung dipasang di titik klik
-         * (data.x / data.y sudah dikonversi ke koordinat
-         * halaman utama di bindSVG)
-         */
 
         this.showTooltip(
             data.nama
@@ -1035,10 +993,6 @@ const MapEngine = {
         }
 
 
-        /*
-         * Load informasi wilayah
-         */
-
         if (
             typeof Dashboard !== "undefined" &&
             Dashboard.loadDistrict
@@ -1053,7 +1007,6 @@ const MapEngine = {
 
     /* ==========================================================
        HIGHLIGHT DISTRICT
-       VERSI KUAT UNTUK SVG
     ========================================================== */
 
     highlight: function(id) {
@@ -1079,10 +1032,6 @@ const MapEngine = {
         const svg =
             obj.contentDocument;
 
-
-        /* ======================================================
-           RESET SEMUA DISTRICT
-        ====================================================== */
 
         svg.querySelectorAll(
             ".district"
@@ -1119,10 +1068,6 @@ const MapEngine = {
                     "2";
 
 
-                /*
-                 * Reset juga semua anak SVG
-                 */
-
                 item.querySelectorAll(
                     "*"
                 ).forEach(
@@ -1144,10 +1089,6 @@ const MapEngine = {
             }
         );
 
-
-        /* ======================================================
-           CARI DISTRICT YANG DIPILIH
-        ====================================================== */
 
         const aktif =
             svg.getElementById(id);
@@ -1181,10 +1122,6 @@ const MapEngine = {
             return;
         }
 
-
-        /* ======================================================
-           AKTIFKAN DISTRICT
-        ====================================================== */
 
         aktif.classList.add(
             "district-active"
@@ -1223,11 +1160,6 @@ const MapEngine = {
         aktif.style.cursor =
             "pointer";
 
-
-        /* ======================================================
-           PAKSA SEMUA PATH / SHAPE DI DALAM DISTRICT IKUT
-           HIGHLIGHT
-        ====================================================== */
 
         aktif.querySelectorAll(
             "path, polygon, polyline, rect, circle, ellipse"
@@ -1337,11 +1269,6 @@ const MapEngine = {
 
 /* ==========================================================
    TOOLTIP FOLLOW MOUSE
-   (untuk area DI LUAR <object> peta - misal saat hover di
-   panel kiri/kanan. Untuk area DI DALAM peta, sudah ditangani
-   listener mousemove terpisah di dalam bindSVG di atas,
-   karena document di dalam <object> terpisah dari document
-   utama ini.)
 ========================================================== */
 
 document.addEventListener("mousemove", function(e) {
@@ -1368,7 +1295,7 @@ const PortalAPI = {
         this.loadAgenda();
         this.loadDashboard();
         // this.loadFasyankes();  
-        this.loadSdm();
+        this.loadSdm(); // load total kabupaten dulu saat halaman pertama dibuka
         this.loadPenyakit();
     },
     
@@ -1461,7 +1388,6 @@ const PortalAPI = {
     renderFasyankes: function(items) {
         var container = DOM.id("fasyankesContainer");
         if (!container) {
-            // Fallback: update elemen individual jika container tidak ada
             items.forEach(function(item) {
                 var el = null;
                 var nama = item.nama || item.nama_item || '';
@@ -1487,17 +1413,29 @@ const PortalAPI = {
     // ==========================================================
 // SDM
 // ==========================================================
+// Sekarang bisa terima parameter nama kecamatan (opsional).
+// - Tanpa parameter -> TOTAL SDM se-kabupaten (tampilan awal / landing page)
+// - Dengan parameter -> SDMK khusus kecamatan yang sedang aktif di peta
+// Dipanggil ulang otomatis dari Dashboard.renderData() tiap klik kecamatan.
+// ==========================================================
 
-loadSdm: function() {
-    var cache = Cache.get("sdm", 120000);
+loadSdm: function(kecamatan) {
+    var cacheKey = "sdm_" + (kecamatan || "total");
+    var cache = Cache.get(cacheKey, 60000);
     if (cache) {
         this.renderSdm(cache);
         return;
     }
-    this.fetchJSON("api/get_sdm.php?ts=" + Date.now())
+
+    var url = "api/get_sdm.php?ts=" + Date.now();
+    if (kecamatan) {
+        url += "&kecamatan=" + encodeURIComponent(kecamatan);
+    }
+
+    this.fetchJSON(url)
         .then(function(json) {
             if (json.status) {
-                Cache.set("sdm", json.data);
+                Cache.set(cacheKey, json.data);
                 PortalAPI.renderSdm(json.data);
             }
         })
@@ -1541,7 +1479,6 @@ renderSdm: function(items) {
 loadPenyakit: function() {
     console.log("Penyakit dipanggil!");
     var self = this;
-    // NONAKTIFKAN CACHE
     this.fetchJSON("api/get_penyakit_populer.php?ts=" + Date.now())
         .then(function(json) {
             console.log("API Response:", json);
@@ -1581,7 +1518,6 @@ renderPenyakit: function(items) {
     ========================================================== */
 
     loadDistrict: function(id) {
-        // Hapus prefix "kec_" jika ada
         var cleanId = id;
         if (id && id.startsWith("kec_")) {
             cleanId = id.substring(4);
@@ -1654,13 +1590,11 @@ const Dashboard = {
             return;
         }
 
-        // Hapus prefix "kec_" jika ada
         var cleanId = id;
         if (id && id.startsWith("kec_")) {
             cleanId = id.substring(4);
         }
 
-        // Mapping ID SVG ke nama kecamatan di database
         var nameMapping = {
             'mojolaban': 'Mojolaban',
             'baki': 'Baki',
@@ -1676,7 +1610,6 @@ const Dashboard = {
             'nguter': 'Nguter'
         };
 
-        // Gunakan mapping jika ada
         if (nameMapping[cleanId]) {
             cleanId = nameMapping[cleanId];
         }
@@ -1754,6 +1687,14 @@ renderData: function(data) {
     this.setNumber("statFasyankesRS", d.rumah_sakit || d.jumlah_rumah_sakit || 0);
 
     this.lastData = d;
+
+    // ===== SDM KESEHATAN =====
+    // Panggil ulang panel SDM khusus kecamatan yang baru diklik ini,
+    // supaya tidak lagi nyangkut nampilin total kabupaten terus-terusan.
+    var namaKec = d.nama || d.nama_kecamatan;
+    if (namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
+        PortalAPI.loadSdm(namaKec);
+    }
 },
 
     showLoading: function() {
@@ -1850,6 +1791,3 @@ window.addEventListener("load", function() {
 ========================================================== */
 
 Log.info("app_v2.js loaded successfully.");
-
-
-

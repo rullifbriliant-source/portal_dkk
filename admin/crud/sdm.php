@@ -62,6 +62,24 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
+// ============================================================
+// AMBIL DAFTAR KECAMATAN + TOTAL SDMK PER KECAMATAN
+// ============================================================
+
+$kecamatanList = [];
+$kecQuery = mysqli_query($config, "
+    SELECT k.id_kecamatan, k.nama_kecamatan, k.kode_kecamatan,
+           COALESCE(SUM(sk.jumlah), 0) AS total_sdmk
+    FROM tbl_kecamatan k
+    LEFT JOIN tbl_sdm_kecamatan sk ON sk.id_kecamatan = k.id_kecamatan
+    WHERE k.aktif = 'Y'
+    GROUP BY k.id_kecamatan, k.nama_kecamatan, k.kode_kecamatan
+    ORDER BY k.nama_kecamatan
+");
+while ($row = mysqli_fetch_assoc($kecQuery)) {
+    $kecamatanList[] = $row;
+}
+
 $username = $_SESSION['admin_username'] ?? 'Admin';
 ?>
 <!DOCTYPE html>
@@ -297,6 +315,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
             font-weight: 600;
             cursor: pointer;
             transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
         .btn-primary:hover {
             transform: translateY(-2px);
@@ -330,6 +350,16 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         }
         .form-inline-edit .input-order {
             width: 60px;
+        }
+
+        .badge-total {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: rgba(0,212,255,0.12);
+            color: #72e8ff;
+            font-weight: 600;
+            font-size: 12px;
         }
 
         @media (max-width: 768px) {
@@ -390,7 +420,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 
     <!-- TABEL LIST -->
     <div class="card">
-        <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar SDM</h3>
+        <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar SDM (Total Kabupaten)</h3>
         <table>
             <thead>
                 <tr>
@@ -425,6 +455,45 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                 <tr>
                     <td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">
                         <i class="fas fa-database"></i> Belum ada data SDM
+                    </td>
+                </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- TABEL SDMK PER KECAMATAN (BARU) -->
+    <div class="card">
+        <h3><i class="fas fa-map-marker-alt" style="color:#00d4ff;margin-right:10px;"></i>SDMK per Kecamatan</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nama Kecamatan</th>
+                    <th>Kode</th>
+                    <th>Total SDMK</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (count($kecamatanList) > 0): ?>
+                <?php foreach ($kecamatanList as $index => $kec): ?>
+                <tr>
+                    <td><?php echo $index + 1; ?></td>
+                    <td><?php echo htmlspecialchars($kec['nama_kecamatan']); ?></td>
+                    <td><?php echo htmlspecialchars($kec['kode_kecamatan']); ?></td>
+                    <td><span class="badge-total"><?php echo number_format($kec['total_sdmk']); ?> orang</span></td>
+                    <td>
+                        <a href="sdm_kecamatan.php?id=<?php echo $kec['id_kecamatan']; ?>" class="btn-primary">
+                            <i class="fas fa-user-md"></i> Kelola SDMK
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <?php else: ?>
+                <tr>
+                    <td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">
+                        <i class="fas fa-map"></i> Belum ada data kecamatan. Tambahkan dulu di menu Kecamatan.
                     </td>
                 </tr>
                 <?php endif; ?>

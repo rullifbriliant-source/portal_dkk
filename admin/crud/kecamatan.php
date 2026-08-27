@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nama = mysqli_real_escape_string($config, $_POST['nama_kecamatan'] ?? '');
         $kode = mysqli_real_escape_string($config, $_POST['kode_kecamatan'] ?? '');
         $penduduk = (int)($_POST['jumlah_penduduk'] ?? 0);
-        $kk = (int)($_POST['jumlah_kk'] ?? 0);
+        // Hapus $kk karena kolom jumlah_kk TIDAK ADA di database
         $desa = (int)($_POST['jumlah_desa'] ?? 0);
         $puskesmas = (int)($_POST['jumlah_puskesmas'] ?? 0);
         $pustu = (int)($_POST['jumlah_pustu'] ?? 0);
@@ -19,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rs = (int)($_POST['jumlah_rumah_sakit'] ?? 0);
 
         $sql = "INSERT INTO tbl_kecamatan 
-                (nama_kecamatan, kode_kecamatan, jumlah_penduduk, jumlah_kk, jumlah_desa, 
+                (nama_kecamatan, kode_kecamatan, jumlah_penduduk, jumlah_desa, 
                  jumlah_puskesmas, jumlah_pustu, jumlah_posyandu, jumlah_klinik, jumlah_rumah_sakit, aktif) 
-                VALUES ('$nama', '$kode', $penduduk, $kk, $desa, $puskesmas, $pustu, $posyandu, $klinik, $rs, 'Y')";
+                VALUES ('$nama', '$kode', $penduduk, $desa, $puskesmas, $pustu, $posyandu, $klinik, $rs, 'Y')";
         mysqli_query($config, $sql);
         header('Location: kecamatan.php?msg=added');
         exit;
@@ -31,14 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)$_POST['id'];
         
         // ===== PENGAMANAN: NAMA KECAMATAN DIKUNCI =====
-        // Ambil nama lama dari database, jangan ambil dari $_POST agar tidak bisa diubah
         $query_old = mysqli_query($config, "SELECT nama_kecamatan FROM tbl_kecamatan WHERE id_kecamatan=$id");
         $row_old = mysqli_fetch_assoc($query_old);
         $nama = $row_old['nama_kecamatan'] ?? ''; 
 
         $kode = mysqli_real_escape_string($config, $_POST['kode_kecamatan'] ?? '');
         $penduduk = (int)($_POST['jumlah_penduduk'] ?? 0);
-        $kk = (int)($_POST['jumlah_kk'] ?? 0);
         $desa = (int)($_POST['jumlah_desa'] ?? 0);
         $puskesmas = (int)($_POST['jumlah_puskesmas'] ?? 0);
         $pustu = (int)($_POST['jumlah_pustu'] ?? 0);
@@ -49,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql = "UPDATE tbl_kecamatan SET 
                 kode_kecamatan='$kode',
                 jumlah_penduduk=$penduduk, 
-                jumlah_kk=$kk,
                 jumlah_desa=$desa, 
                 jumlah_puskesmas=$puskesmas, 
                 jumlah_pustu=$pustu, 
@@ -72,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $data = mysqli_query($config, "SELECT * FROM tbl_kecamatan WHERE aktif='Y' ORDER BY nama_kecamatan");
 $username = $_SESSION['admin_username'] ?? 'Admin';
-$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -142,7 +138,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         .modal-actions .btn-secondary { padding:10px 20px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.6); cursor:pointer; transition:0.3s; }
         .modal-actions .btn-secondary:hover { background:rgba(255,255,255,0.05); color:#fff; }
 
-        /* Gaya untuk input yang dikunci */
         .readonly-input {
             background: rgba(255,255,255,0.03) !important;
             cursor: not-allowed !important;
@@ -160,11 +155,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
     </div>
     <ul class="sidebar-menu">
-        <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-        <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
-        <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
-        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="../index.php" class="<?= ($current_page == 'index.php') ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="fasyankes.php" class="<?= ($current_page == 'fasyankes.php') ? 'active' : '' ?>"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="sdm.php" class="<?= ($current_page == 'sdm.php') ? 'active' : '' ?>"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="kecamatan.php" class="<?= ($current_page == 'kecamatan.php') ? 'active' : '' ?>"><i class="fas fa-map"></i> Kecamatan</a></li>
+        <li><a href="penyakit.php" class="<?= ($current_page == 'penyakit.php') ? 'active' : '' ?>"><i class="fas fa-disease"></i> Penyakit</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
@@ -182,32 +177,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil disimpan!</div>
     <?php endif; ?>
 
-    <!-- <div class="card">
-        <h3><i class="fas fa-plus-circle" style="color:#00d4ff;margin-right:10px;"></i>Tambah Kecamatan</h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="add">
-            <div class="form-grid">
-                <div class="form-group"><label>Nama Kecamatan</label><input type="text" name="nama_kecamatan" required></div>
-                <div class="form-group"><label>Kode</label><input type="text" name="kode_kecamatan" placeholder="MJL" required></div>
-                <div class="form-group"><label>Penduduk</label><input type="number" name="jumlah_penduduk"></div>
-                <div class="form-group"><label>KK</label><input type="number" name="jumlah_kk"></div>
-                <div class="form-group"><label>Desa</label><input type="number" name="jumlah_desa"></div>
-                <div class="form-group"><label>Puskesmas</label><input type="number" name="jumlah_puskesmas"></div>
-                <div class="form-group"><label>Pustu</label><input type="number" name="jumlah_pustu"></div>
-                <div class="form-group"><label>Posyandu</label><input type="number" name="jumlah_posyandu"></div>
-                <div class="form-group"><label>Klinik</label><input type="number" name="jumlah_klinik"></div>
-                <div class="form-group"><label>Rumah Sakit</label><input type="number" name="jumlah_rumah_sakit"></div>
-            </div>
-            <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah</button>
-        </form>
-    </div> -->
-
     <div class="card">
         <h3><i class="fas fa-list" style="color:#00d4ff;margin-right:10px;"></i>Daftar Kecamatan</h3>
         <table>
             <thead>
                 <tr>
-                    <th>#</th><th>Nama</th><th>Kode</th><th>Penduduk</th><th>KK</th>
+                    <th>#</th><th>Nama</th><th>Kode</th><th>Penduduk</th>
                     <th>Desa</th><th>Puskesmas</th><th>Pustu</th><th>Posyandu</th><th>Klinik</th><th>RS</th><th>Aksi</th>
                 </tr>
             </thead>
@@ -218,7 +193,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <td><?= htmlspecialchars($row['nama_kecamatan']) ?></td>
                     <td><?= $row['kode_kecamatan'] ?></td>
                     <td><?= number_format((float)($row['jumlah_penduduk'] ?? 0)) ?></td>
-                    <td><?= number_format((float)($row['jumlah_kk'] ?? 0)) ?></td>
                     <td><?= $row['jumlah_desa'] ?></td>
                     <td><?= $row['jumlah_puskesmas'] ?></td>
                     <td><?= $row['jumlah_pustu'] ?></td>
@@ -231,7 +205,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             data-nama="<?= htmlspecialchars($row['nama_kecamatan']) ?>"
                             data-kode="<?= $row['kode_kecamatan'] ?>"
                             data-penduduk="<?= $row['jumlah_penduduk'] ?>"
-                            data-kk="<?= $row['jumlah_kk'] ?? 0 ?>"
                             data-desa="<?= $row['jumlah_desa'] ?>"
                             data-puskesmas="<?= $row['jumlah_puskesmas'] ?>"
                             data-pustu="<?= $row['jumlah_pustu'] ?>"
@@ -249,7 +222,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </tr>
                 <?php endwhile; ?>
                 <?php if (mysqli_num_rows($data) == 0): ?>
-                <tr><td colspan="12" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">Belum ada data kecamatan</td></tr>
+                <tr><td colspan="11" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">Belum ada data kecamatan</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -270,7 +243,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </div>
                 <div class="form-group"><label>Kode</label><input type="text" name="kode_kecamatan" id="editKode" required></div>
                 <div class="form-group"><label>Penduduk</label><input type="number" name="jumlah_penduduk" id="editPenduduk"></div>
-                <div class="form-group"><label>KK</label><input type="number" name="jumlah_kk" id="editKk"></div>
                 <div class="form-group"><label>Desa</label><input type="number" name="jumlah_desa" id="editDesa"></div>
                 <div class="form-group"><label>Puskesmas</label><input type="number" name="jumlah_puskesmas" id="editPuskesmas"></div>
                 <div class="form-group"><label>Pustu</label><input type="number" name="jumlah_pustu" id="editPustu"></div>
@@ -293,7 +265,6 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
         document.getElementById('editNama').value = this.dataset.nama;
         document.getElementById('editKode').value = this.dataset.kode;
         document.getElementById('editPenduduk').value = this.dataset.penduduk;
-        document.getElementById('editKk').value = this.dataset.kk;
         document.getElementById('editDesa').value = this.dataset.desa;
         document.getElementById('editPuskesmas').value = this.dataset.puskesmas;
         document.getElementById('editPustu').value = this.dataset.pustu;
