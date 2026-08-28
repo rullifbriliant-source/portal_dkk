@@ -1472,25 +1472,31 @@ renderSdm: function(items) {
     },
 
 
+       // ==========================================================
+    // PENYAKIT POPULER (Bisa per Kecamatan)
     // ==========================================================
-// PENYAKIT POPULER
-// ==========================================================
 
-loadPenyakit: function() {
-    console.log("Penyakit dipanggil!");
-    var self = this;
-    this.fetchJSON("api/get_penyakit_populer.php?ts=" + Date.now())
-        .then(function(json) {
-            console.log("API Response:", json);
-            if (json.status) {
-                self.renderPenyakit(json.data);
-            }
-        })
-        .catch(function(err) {
-            console.error("Error:", err);
-            Log.warn("Gagal load data penyakit populer:", err);
-        });
-},
+    loadPenyakit: function(kecamatan) {
+        console.log("Penyakit dipanggil!", kecamatan);
+        var self = this;
+        
+        var url = "api/get_penyakit_populer.php?ts=" + Date.now();
+        if (kecamatan) {
+            url += "&kecamatan=" + encodeURIComponent(kecamatan);
+        }
+
+        this.fetchJSON(url)
+            .then(function(json) {
+                console.log("API Response:", json);
+                if (json.status) {
+                    self.renderPenyakit(json.data);
+                }
+            })
+            .catch(function(err) {
+                console.error("Error:", err);
+                Log.warn("Gagal load data penyakit populer:", err);
+            });
+    },
 
 renderPenyakit: function(items) {
     console.log("renderPenyakit dipanggil, items:", items.length);
@@ -1681,22 +1687,26 @@ renderData: function(data) {
     this.setNumber("jumlahPustu", d.pustu || d.jumlah_pustu || 0);
     this.setNumber("jumlahPosyandu", d.posyandu || d.jumlah_posyandu || 0);
     this.setNumber("jumlahDesa", d.desa || d.jumlah_desa || 0);
+
+    // ===== FASYANKES =====
     this.setNumber("statFasyankesPuskesmas", d.puskesmas || d.jumlah_puskesmas || 0);
     this.setNumber("statFasyankesPustu", d.pustu || d.jumlah_pustu || 0);
     this.setNumber("statFasyankesKlinik", d.klinik || d.jumlah_klinik || 0);
     this.setNumber("statFasyankesRS", d.rumah_sakit || d.jumlah_rumah_sakit || 0);
 
-    this.lastData = d;
+       this.lastData = d;
+
+    // ===== PANGGIL PENYAKIT PER KECAMATAN =====
+    var namaKec = d.nama || d.nama_kecamatan;
+    if (namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
+        PortalAPI.loadPenyakit(namaKec);
+    }
 
     // ===== SDM KESEHATAN =====
-    // Panggil ulang panel SDM khusus kecamatan yang baru diklik ini,
-    // supaya tidak lagi nyangkut nampilin total kabupaten terus-terusan.
-    var namaKec = d.nama || d.nama_kecamatan;
     if (namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
         PortalAPI.loadSdm(namaKec);
     }
 },
-
     showLoading: function() {
         this.loading = true;
         this.setText("namaKecamatan", "Memuat...");
