@@ -1,5 +1,4 @@
 <?php
-
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -30,6 +29,7 @@ $sql = "SELECT
             kode_kecamatan,
             nama_kecamatan,
             jumlah_penduduk,
+            jumlah_kk,
             jumlah_desa,
             jumlah_puskesmas,
             jumlah_pustu,
@@ -64,33 +64,9 @@ if (!$row) {
     exit;
 }
 
-/*
-|--------------------------------------------------------------------------
-| AMBIL TOTAL PENYAKIT PER KECAMATAN
-|--------------------------------------------------------------------------
-*/
-$q_total_penyakit = mysqli_query($config, "SELECT SUM(nilai) as total FROM tbl_penyakit_kecamatan WHERE LOWER(kode_kecamatan) = LOWER('".$row['nama_kecamatan']."') AND aktif='Y'");
-$total_penyakit = mysqli_fetch_assoc($q_total_penyakit)['total'] ?? 0;
-
-/*
-|--------------------------------------------------------------------------
-| AMBIL DATA SDM PER KECAMATAN
-|--------------------------------------------------------------------------
-*/
-$sdm_data = [];
-$q_sdm = mysqli_query($config, "SELECT nama_item, nilai FROM tbl_sdm_items WHERE LOWER(kode_kecamatan) = LOWER('".$row['nama_kecamatan']."') AND aktif='Y' ORDER BY urutan");
-while ($s = mysqli_fetch_assoc($q_sdm)) {
-    $sdm_data[] = [
-        'nama' => $s['nama_item'],
-        'nilai' => (int)$s['nilai']
-    ];
-}
-
-/*
-|--------------------------------------------------------------------------
-| RESPONSE
-|--------------------------------------------------------------------------
-*/
+// ============================================================
+// RESPONSE
+// ============================================================
 
 echo json_encode([
     'status' => true,
@@ -101,6 +77,7 @@ echo json_encode([
 
     // DATA DASAR
     'penduduk' => (int) $row['jumlah_penduduk'],
+    'kk' => (int) $row['jumlah_kk'],
     'desa' => (int) $row['jumlah_desa'],
 
     // FASYANKES
@@ -113,9 +90,5 @@ echo json_encode([
     'posyandu' => (int) $row['jumlah_posyandu'],
     'rs' => (int) $row['jumlah_rs'],
     'luas' => (float) $row['luas_wilayah'],
-    'kepadatan' => (int) $row['kepadatan'],
-
-    // DATA BARU: TOTAL PENYAKIT & SDM
-    'total_penyakit' => (int) $total_penyakit,
-    'sdm' => $sdm_data
+    'kepadatan' => (int) $row['kepadatan']
 ]);

@@ -229,16 +229,13 @@
                 <i class="fas fa-circle-info"></i>
                 Informasi Portal
             </h4>
-
-            <p>
-
-                Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo
-                merupakan pusat informasi digital yang mengintegrasikan
-                seluruh layanan, data kesehatan, dashboard,
-                aplikasi internal serta layanan publik
-                dalam satu tampilan interaktif.
-
-            </p>
+<p id="portalDeskripsi">
+    Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo
+    merupakan pusat informasi digital yang mengintegrasikan
+    seluruh layanan, data kesehatan, dashboard,
+    aplikasi internal serta layanan publik
+    dalam satu tampilan interaktif.
+</p>
 
             <div class="portal-feature">
 

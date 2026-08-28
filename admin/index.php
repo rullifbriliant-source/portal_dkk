@@ -2,17 +2,19 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+
+
 require_once __DIR__ . '/config.php';
 requireLogin();
 
 require_once __DIR__ . '/../config/database.php';
 
-$current_page = basename($_SERVER['PHP_SELF']); // Untuk Sidebar Aktif
 
 $username = $_SESSION['admin_username'] ?? 'Admin';
 
 // Ambil data kecamatan
 $dataKecamatan = mysqli_query($config, "SELECT * FROM tbl_kecamatan WHERE aktif='Y' ORDER BY nama_kecamatan");
+$totalKecamatan = mysqli_num_rows($dataKecamatan);
 
 // Ambil data fasyankes
 $itemsFasyankes = [];
@@ -77,6 +79,14 @@ if (empty($itemsSdm)) {
     ];
     $sdmCount = count($itemsSdm);
 }
+
+// Ambil data portal info
+$dataPortal = [];
+$checkPortal = mysqli_query($config, "SHOW TABLES LIKE 'tbl_portal_info'");
+if (mysqli_num_rows($checkPortal) > 0) {
+    $qPortal = mysqli_query($config, "SELECT deskripsi FROM tbl_portal_info WHERE id = 1");
+    $dataPortal = mysqli_fetch_assoc($qPortal) ?? [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -120,7 +130,12 @@ if (empty($itemsSdm)) {
         .welcome-box h2 { font-size: 25px; color: #fff; margin-bottom: 5px; }
         .welcome-box p { color: rgba(255,255,255,0.5); font-size: 14px; }
 
-        .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+        /* === GRID SEMUA CARD === */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 22px;
+        }
 
         .card-editor {
             position: relative; background: rgba(255,255,255,0.05);
@@ -131,6 +146,7 @@ if (empty($itemsSdm)) {
             transform: translateY(-4px); background: rgba(255,255,255,0.07);
             border-color: rgba(0,212,255,0.25); box-shadow: 0 15px 40px rgba(0,0,0,0.25);
         }
+
         .card-title {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
         }
@@ -196,8 +212,12 @@ if (empty($itemsSdm)) {
             <p>Kelola data yang ditampilkan pada Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo.</p>
         </div>
 
+        <!-- ======================================================
+        SEMUA CARD DALAM SATU GRID 2 KOLOM
+        ====================================================== -->
         <div class="card-grid">
-            <!-- Card Fasyankes -->
+
+            <!-- 1. FASYANKES -->
             <div class="card-editor">
                 <div class="card-title">
                     <div class="card-title-left">
@@ -220,7 +240,7 @@ if (empty($itemsSdm)) {
                 <a href="crud/fasyankes.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Fasyankes</a>
             </div>
 
-            <!-- Card SDM -->
+            <!-- 2. SDM -->
             <div class="card-editor">
                 <div class="card-title">
                     <div class="card-title-left">
@@ -243,7 +263,7 @@ if (empty($itemsSdm)) {
                 <a href="crud/sdm.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola SDM</a>
             </div>
 
-            <!-- Card Penyakit -->
+            <!-- 3. PENYAKIT -->
             <div class="card-editor" id="penyakitCard">
                 <div class="card-title">
                     <div class="card-title-left">
@@ -292,7 +312,7 @@ if (empty($itemsSdm)) {
                 <a href="crud/penyakit.php" class="btn-edit"><i class="fas fa-pen"></i> Edit Data Penyakit</a>
             </div>
 
-            <!-- Card Data Dasar Wilayah -->
+            <!-- 4. DATA DASAR WILAYAH -->
             <div class="card-editor">
                 <div class="card-title">
                     <div class="card-title-left">
@@ -305,57 +325,78 @@ if (empty($itemsSdm)) {
                     <span class="badge badge-warning">SEGERA</span>
                 </div>
                 <table>
-                    <tr><td>Kecamatan</td><td><?= mysqli_num_rows($dataKecamatan) ?></td></tr>
+                    <tr><td>Kecamatan</td><td><?= $totalKecamatan ?></td></tr>
                     <tr><td>Desa / Kelurahan</td><td>-</td></tr>
                     <tr><td>Penduduk</td><td>-</td></tr>
                     <tr><td>Kepala Keluarga</td><td>-</td></tr>
                 </table>
                 <a href="#" class="btn-edit btn-disabled"><i class="fas fa-pen"></i> Edit Data Wilayah</a>
             </div>
-        </div>
 
-        <!-- ======================================================
-        CARD DATA KECAMATAN (SATU CARD SAJA)
-        ====================================================== -->
-        <div class="card-editor" style="margin-top:30px;">
-            <div class="card-title">
-                <div class="card-title-left">
-                    <i class="fas fa-map"></i>
-                    <div>
-                        <h3>Data Kecamatan</h3>
-                        <p>Kelola data kecamatan</p>
+            <!-- 5. DATA KECAMATAN -->
+            <div class="card-editor">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-map"></i>
+                        <div>
+                            <h3>Data Kecamatan</h3>
+                            <p>Kelola data kecamatan</p>
+                        </div>
                     </div>
+                    <span class="badge"><?= $totalKecamatan ?> item</span>
                 </div>
-                <span class="badge"><?= mysqli_num_rows($dataKecamatan) ?> item</span>
-            </div>
-            
-            <table>
-                <?php 
-                $limitKec = 5;
-                $i = 0;
-                mysqli_data_seek($dataKecamatan, 0); // Reset pointer
-                while ($row = mysqli_fetch_assoc($dataKecamatan)) {
-                    if ($i >= $limitKec) break;
-                    ?>
-                    <tr>
-                        <td><?= ($i+1) . '. ' . htmlspecialchars($row['nama_kecamatan']) ?></td>
-                        <td><?= $row['kode_kecamatan'] ?></td>
-                    </tr>
+                <table>
                     <?php 
-                    $i++;
-                } 
-                ?>
-                <?php if (mysqli_num_rows($dataKecamatan) > $limitKec): ?>
-                <tr>
-                    <td colspan="2" style="text-align:center;padding:8px 0;color:rgba(255,255,255,0.4);font-size:12px;">
-                        ... dan <?= mysqli_num_rows($dataKecamatan) - $limitKec ?> lainnya
-                    </td>
-                </tr>
-                <?php endif; ?>
-            </table>
+                    $limitKec = 5;
+                    $i = 0;
+                    mysqli_data_seek($dataKecamatan, 0);
+                    while ($row = mysqli_fetch_assoc($dataKecamatan)) {
+                        if ($i >= $limitKec) break;
+                        ?>
+                        <tr>
+                            <td><?= ($i+1) . '. ' . htmlspecialchars($row['nama_kecamatan']) ?></td>
+                            <td><?= $row['kode_kecamatan'] ?></td>
+                        </tr>
+                        <?php 
+                        $i++;
+                    } 
+                    ?>
+                    <?php if ($totalKecamatan > $limitKec): ?>
+                    <tr>
+                        <td colspan="2" style="text-align:center;padding:8px 0;color:rgba(255,255,255,0.4);font-size:12px;">
+                            ... dan <?= $totalKecamatan - $limitKec ?> lainnya
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                </table>
+                <a href="crud/kecamatan.php" class="btn-edit"><i class="fas fa-external-link-alt"></i> Kelola Lengkap</a>
+            </div>
 
-            <a href="crud/kecamatan.php" class="btn-edit"><i class="fas fa-external-link-alt"></i> Kelola Lengkap</a>
-        </div>
+            <!-- 6. INFORMASI PORTAL -->
+            <div class="card-editor">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-circle-info"></i>
+                        <div>
+                            <h3>Informasi Portal</h3>
+                            <p>Teks deskripsi panel kiri</p>
+                        </div>
+                    </div>
+                    <span class="badge">AKTIF</span>
+                </div>
+                <table>
+                    <tr>
+                        <td colspan="2" style="font-size:12px;color:rgba(255,255,255,0.5);padding:8px 0;line-height:1.6;">
+                            <?= htmlspecialchars(substr($dataPortal['deskripsi'] ?? '', 0, 120)) ?>...
+                        </td>
+                    </tr>
+                </table>
+                <a href="crud/portal_info.php" class="btn-edit">
+                    <i class="fas fa-pen"></i> Edit Deskripsi
+                </a>
+            </div>
+
+        </div><!-- end card-grid -->
 
         <div class="admin-footer">
             Portal Terpadu Dinas Kesehatan Kabupaten Sukoharjo &copy; <?= date('Y') ?>

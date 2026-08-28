@@ -156,6 +156,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 </head>
 <body>
 
+<!-- ===== SIDEBAR ===== -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <img src="../../assets/img/kabupaten.png" alt="Logo">
@@ -167,6 +168,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM</a></li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>

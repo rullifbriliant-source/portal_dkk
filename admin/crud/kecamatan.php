@@ -149,17 +149,19 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 </head>
 <body>
 
+<!-- ===== SIDEBAR ===== -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <img src="../../assets/img/kabupaten.png" alt="Logo">
         <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
     </div>
     <ul class="sidebar-menu">
-        <li><a href="../index.php" class="<?= ($current_page == 'index.php') ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-        <li><a href="fasyankes.php" class="<?= ($current_page == 'fasyankes.php') ? 'active' : '' ?>"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php" class="<?= ($current_page == 'sdm.php') ? 'active' : '' ?>"><i class="fas fa-users"></i> SDM</a></li>
-        <li><a href="kecamatan.php" class="<?= ($current_page == 'kecamatan.php') ? 'active' : '' ?>"><i class="fas fa-map"></i> Kecamatan</a></li>
-        <li><a href="penyakit.php" class="<?= ($current_page == 'penyakit.php') ? 'active' : '' ?>"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="kecamatan.php" class="active"><i class="fas fa-map"></i> Kecamatan</a></li>
+        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>

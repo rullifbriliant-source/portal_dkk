@@ -1297,6 +1297,8 @@ const PortalAPI = {
         // this.loadFasyankes();  
         this.loadSdm(); // load total kabupaten dulu saat halaman pertama dibuka
         this.loadPenyakit();
+        this.loadPortalInfo(); 
+        
     },
     
 
@@ -1410,15 +1412,25 @@ const PortalAPI = {
         html += '</table>';
         container.innerHTML = html;
     },
-    // ==========================================================
-// SDM
-// ==========================================================
-// Sekarang bisa terima parameter nama kecamatan (opsional).
-// - Tanpa parameter -> TOTAL SDM se-kabupaten (tampilan awal / landing page)
-// - Dengan parameter -> SDMK khusus kecamatan yang sedang aktif di peta
-// Dipanggil ulang otomatis dari Dashboard.renderData() tiap klik kecamatan.
-// ==========================================================
 
+loadPortalInfo: function() {
+    this.fetchJSON("api/get_portal_info.php?ts=" + Date.now())
+        .then(function(json) {
+            if (json.status) {
+                PortalAPI.renderPortalInfo(json.data);
+            }
+        })
+        .catch(function(err) {
+            Log.warn("Gagal load portal info:", err);
+        });
+},
+
+renderPortalInfo: function(data) {
+    var el = DOM.id("portalDeskripsi");
+    if (el && data.deskripsi) {
+        el.innerHTML = data.deskripsi;
+    }
+},
 loadSdm: function(kecamatan) {
     var cacheKey = "sdm_" + (kecamatan || "total");
     var cache = Cache.get(cacheKey, 60000);
