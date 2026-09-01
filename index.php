@@ -445,7 +445,7 @@
 </div>
 
         <!-- DATA DASAR -->
-        <div class="glass-card">
+        <div class="glass-card card-full">
 
             <h4>
                 <i class="fas fa-circle-nodes"></i>
@@ -481,7 +481,7 @@
 
         </div>
                 <!-- 10 PENYAKIT POPULER -->
-<div class="glass-card">
+<div class="glass-card card-full card-scrollable">
     <h4>
         <i class="fas fa-virus"></i>
         10 Penyakit Populer

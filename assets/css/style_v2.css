@@ -386,12 +386,18 @@ body { min-height:100vh; overflow-y:visible; }
     font-size:13px; color:#00d4ff; flex-shrink:0;
 }
 
-.right-panel .glass-card:nth-child(4) {
-    grid-column:1 / -1; max-height:220px; overflow-y:auto;
+.right-panel .glass-card.card-full {
+    grid-column: 1 / -1;
 }
-.right-panel .glass-card:nth-child(4)::-webkit-scrollbar { width:4px; }
-.right-panel .glass-card:nth-child(4)::-webkit-scrollbar-track { background:transparent; }
-.right-panel .glass-card:nth-child(4)::-webkit-scrollbar-thumb {
+
+/* Semua card kanan: tinggi tetap + scrollbar per-card sendiri */
+.right-panel .glass-card {
+    max-height: 220px;
+    overflow-y: auto;
+}
+.right-panel .glass-card::-webkit-scrollbar { width:4px; }
+.right-panel .glass-card::-webkit-scrollbar-track { background:transparent; }
+.right-panel .glass-card::-webkit-scrollbar-thumb {
     background:rgba(0,212,255,.45); border-radius:10px;
 }
 
@@ -560,7 +566,7 @@ body { min-height:100vh; overflow-y:visible; }
     .small-title { font-size:9px; letter-spacing:2px; }
     #clock { font-size:32px; }
     .right-panel { padding-left:0; grid-template-columns:1fr; }
-    .right-panel .glass-card:nth-child(4) { grid-column:1 / -1; max-height:260px; }
+    .right-panel .glass-card { max-height:260px; }
     .header-logo-kabupaten { width:80px; height:100px; }
     .header-logo-spektakuler { width:150px; height:100px; }
     .header-info h1 { font-size:32px; }
