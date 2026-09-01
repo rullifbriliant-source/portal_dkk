@@ -679,6 +679,7 @@ id="footerBar">
 <script src="assets/js/map.js"></script>
 <script src="assets/js/app_v2.js"></script>
 <script src="assets/js/responsive.js"></script>
+<script src="assets/js/map-cursor-follow.js"></script>
 
     <!-- =======================================================
     STARTUP
