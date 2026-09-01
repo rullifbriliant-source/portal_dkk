@@ -673,16 +673,12 @@ id="footerBar">
     ======================================================= -->
 
 
-
-    <script src="assets/js/starfield.js"></script>
-
-    <script src="assets/js/network.js"></script>
-
-    <script src="assets/js/map.js"></script>
-
-    <script src="assets/js/app_v2.js"></script>
-
-    <script src="assets/js/responsive.js"></script>
+<script src="assets/js/starfield.js"></script>
+<script src="assets/js/map-parallax.js"></script>
+<script src="assets/js/network.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/app_v2.js"></script>
+<script src="assets/js/responsive.js"></script>
 
     <!-- =======================================================
     STARTUP
