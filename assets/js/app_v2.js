@@ -475,6 +475,18 @@ const MapEngine = {
             this.onDistrictClick.bind(this)
         );
 
+        // Saat window di-resize, posisikan ulang tooltip yang terkunci
+        // berdasarkan elemen kecamatan yang sedang dipilih.
+        let resizeTimer = null;
+        window.addEventListener("resize", function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (MapEngine.current) {
+                    MapEngine.pinTooltip(MapEngine.current);
+                }
+            }, 100);
+        });
+
         Log.info("Map Engine Ready");
     },
 
@@ -976,21 +988,13 @@ const MapEngine = {
             data.id
         );
 
-
         this.showTooltip(
             data.nama
         );
 
-        if (
-            typeof data.x === "number" &&
-            typeof data.y === "number"
-        ) {
-
-            this.moveTooltip(
-                data.x,
-                data.y
-            );
-        }
+        this.pinTooltip(
+            data.id
+        );
 
 
         if (
@@ -1233,6 +1237,13 @@ const MapEngine = {
         );
 
 
+        // Jika kecamatan sudah diklik (tooltip terkunci),
+        // jangan auto-hide agar tetap menetap di posisi kecamatan.
+        if (this.current) {
+            return;
+        }
+
+
         this.tooltip.timer =
             setTimeout(
                 function() {
@@ -1251,9 +1262,65 @@ const MapEngine = {
     },
 
 
-    moveTooltip: function(x, y) {
+    /* ==========================================================
+       PIN TOOLTIP KE TENGAH ELEMEN KECAMATAN YANG DIPILIH
+    ========================================================== */
+
+    pinTooltip: function(id) {
 
         if (!this.tooltip) {
+            return;
+        }
+
+        const obj =
+            DOM.id("svgInteractive") ||
+            DOM.id("svgMap");
+
+        if (
+            !obj ||
+            !obj.contentDocument
+        ) {
+            return;
+        }
+
+        const el =
+            obj.contentDocument.getElementById(id);
+
+        if (!el) {
+            return;
+        }
+
+        const rect =
+            el.getBoundingClientRect();
+
+        const objRect =
+            obj.getBoundingClientRect();
+
+        const x =
+            objRect.left +
+            rect.left +
+            rect.width / 2;
+
+        const y =
+            objRect.top +
+            rect.top +
+            rect.height / 2;
+
+        this.moveTooltip(x, y, true);
+    },
+
+
+    moveTooltip: function(x, y, force) {
+
+        if (!this.tooltip) {
+            return;
+        }
+
+
+        // Setelah kecamatan dipilih, posisi tooltip terkunci.
+        // Hanya pemanggilan pinTooltip (force=true) yang boleh
+        // mengubah posisi, bukan mousemove bebas.
+        if (this.current && !force) {
             return;
         }
 
@@ -1787,6 +1854,23 @@ const FasyankesModal = {
             });
         }
 
+        // Active state kartu Informasi Portal hanya dari interaksi klik user.
+        // Tidak ada kartu yang aktif saat halaman pertama dibuka.
+        Array.prototype.forEach.call(
+            document.querySelectorAll(".portal-feature div"),
+            function(featureCard) {
+                featureCard.addEventListener("click", function() {
+                    Array.prototype.forEach.call(
+                        document.querySelectorAll(".portal-feature div"),
+                        function(other) {
+                            other.classList.remove("active");
+                        }
+                    );
+                    featureCard.classList.add("active");
+                });
+            }
+        );
+
         const closeBtn = DOM.id("closeFasyankes");
         if (closeBtn) {
             closeBtn.addEventListener("click", function() {
@@ -1839,6 +1923,11 @@ const FasyankesModal = {
 
         modal.classList.add("show");
 
+        const card = DOM.id("appFasyankes");
+        if (card) {
+            card.classList.add("active");
+        }
+
         if (!kecamatan) {
             this.currentKecamatan = null;
             this.allItems = [];
@@ -1859,6 +1948,11 @@ const FasyankesModal = {
         const modal = DOM.id("fasyankesModal");
         if (modal) {
             modal.classList.remove("show");
+        }
+
+        const card = DOM.id("appFasyankes");
+        if (card) {
+            card.classList.remove("active");
         }
     },
 
