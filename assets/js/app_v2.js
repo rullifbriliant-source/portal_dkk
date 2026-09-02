@@ -462,6 +462,7 @@ const MapEngine = {
 
     current: null,
     tooltip: null,
+    pinned: false,
     bound: false,
 
     init: function() {
@@ -988,6 +989,14 @@ const MapEngine = {
             data.id
         );
 
+        // Kunci tooltip pada kecamatan yang diklik selama 3 detik.
+        // Timer sebelumnya dibersihkan agar reset bila klik kecamatan lain.
+        this.pinned = true;
+
+        clearTimeout(
+            this.tooltip.timer
+        );
+
         this.showTooltip(
             data.nama
         );
@@ -995,6 +1004,23 @@ const MapEngine = {
         this.pinTooltip(
             data.id
         );
+
+        this.tooltip.timer =
+            setTimeout(
+                function() {
+
+                    MapEngine.pinned = false;
+
+                    if (
+                        MapEngine.tooltip
+                    ) {
+
+                        MapEngine.tooltip.style.opacity =
+                            "0";
+                    }
+                },
+                3000
+            );
 
 
         if (
@@ -1237,9 +1263,9 @@ const MapEngine = {
         );
 
 
-        // Jika kecamatan sudah diklik (tooltip terkunci),
-        // jangan auto-hide agar tetap menetap di posisi kecamatan.
-        if (this.current) {
+        // Jika tooltip terkunci (lagi dipindahkan ke posisi kecamatan
+        // yang diklik), timer auto-hide dijadwalkan oleh onDistrictClick.
+        if (this.pinned) {
             return;
         }
 
@@ -1317,10 +1343,10 @@ const MapEngine = {
         }
 
 
-        // Setelah kecamatan dipilih, posisi tooltip terkunci.
-        // Hanya pemanggilan pinTooltip (force=true) yang boleh
+        // Saat tooltip terkunci pada kecamatan yang diklik (3 detik),
+        // hanya pemanggilan pinTooltip (force=true) yang boleh
         // mengubah posisi, bukan mousemove bebas.
-        if (this.current && !force) {
+        if (this.pinned && !force) {
             return;
         }
 

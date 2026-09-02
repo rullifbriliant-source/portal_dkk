@@ -14,13 +14,16 @@
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body {
+html {
     width:100%; min-height:100%;
     margin:0; padding:0;
-    overflow-x:hidden; overflow-y:auto;
+    overflow-x:hidden; overflow-y:auto; /* html = satu-satunya scroller vertikal (scrollbar utama) */
+}
+body {
+    min-height:100vh;
+    overflow:visible; /* body TIDAK menjadi scroll container, cegah scrollbar kedua */
     font-family:'Poppins',sans-serif; color:#fff; background:#051321;
 }
-body { min-height:100vh; overflow-y:visible; }
 
 .video-container {
     position:fixed; inset:0; overflow:hidden; z-index:-5;
@@ -735,30 +738,20 @@ body { min-height:100vh; overflow-y:visible; }
 }
 
 /* ==========================================================
-   SEMBUNYIKAN SCROLLBAR VISUAL — SCROLLING TETAP AKTIF
-   (document, panel kanan, dan modal). Overflow tetap
-   membolehkan scroll dengan wheel/touchpad/keyboard.
+   SCROLLBAR
+   - Halaman utama memakai scrollbar browser normal (SATU
+     scrollbar vertikal di sisi kanan). Jangan sembunyikan
+     scrollbar html/body.
+   - Scrollbar internal hanya dipertahankan pada card panel
+     kanan dan modal (tetap bisa discroll).
 ========================================================== */
-* {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+html {
+    overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: auto;
 }
-*::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-}
-
-html,
 body {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
+    overflow: visible;
 }
 
 .right-panel .glass-card {
