@@ -1392,13 +1392,24 @@ const PortalAPI = {
         if (!container) {
             items.forEach(function(item) {
                 var el = null;
+                var el2 = null;
                 var nama = item.nama || item.nama_item || '';
-                if (nama.toLowerCase() === 'puskesmas') el = DOM.id("statFasyankesPuskesmas");
-                else if (nama.toLowerCase() === 'pustu') el = DOM.id("statFasyankesPustu");
-                else if (nama.toLowerCase() === 'klinik') el = DOM.id("statFasyankesKlinik");
-                else if (nama.toLowerCase() === 'rumah sakit') el = DOM.id("statFasyankesRS");
+                if (nama.toLowerCase() === 'puskesmas') {
+                    el = DOM.id("statFasyankesPuskesmas");
+                    el2 = DOM.id("statPuskesmas2");
+                } else if (nama.toLowerCase() === 'pustu') {
+                    el = DOM.id("statFasyankesPustu");
+                    el2 = DOM.id("statPustu2");
+                } else if (nama.toLowerCase() === 'klinik') {
+                    el = DOM.id("statFasyankesKlinik");
+                } else if (nama.toLowerCase() === 'rumah sakit') {
+                    el = DOM.id("statFasyankesRS");
+                }
                 if (el) {
                     Counter.start(el.id, item.nilai || 0);
+                }
+                if (el2) {
+                    Counter.start(el2.id, item.nilai || 0);
                 }
             });
             return;
@@ -1750,14 +1761,421 @@ renderData: function(data) {
         }
     },
 
-    setNumber: function(id, value) {
+setNumber: function(id, value) {
         Counter.start(id, value);
     }
 };
 
 /* ==========================================================
-   BAGIAN 8 - STARTUP ENGINE
+   FASYANKES MODAL (PER KECAMATAN TERPILIH DI PETA)
 ========================================================== */
+
+const FasyankesModal = {
+
+    currentKecamatan: null,
+    allItems: [],
+    activeFilter: "Semua",
+
+    init: function() {
+
+        const card = DOM.id("appFasyankes");
+        if (card) {
+            card.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                FasyankesModal.open();
+            });
+        }
+
+        const closeBtn = DOM.id("closeFasyankes");
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function() {
+                FasyankesModal.close();
+            });
+        }
+
+        const modal = DOM.id("fasyankesModal");
+        if (modal) {
+            modal.addEventListener("click", function(e) {
+                if (e.target === modal) {
+                    FasyankesModal.close();
+                }
+            });
+        }
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") {
+                FasyankesModal.close();
+            }
+        });
+
+        Log.info("%cFasyankes Modal Ready", "color:#00d4ff");
+    },
+
+    /* ==========================================================
+       OPEN / CLOSE
+    ========================================================== */
+
+    open: function() {
+
+        const modal = DOM.id("fasyankesModal");
+        if (!modal) return;
+
+        // Kecamatan aktif disimpan oleh Dashboard saat peta diklik
+        let kecamatan = null;
+
+        if (
+            typeof Dashboard !== "undefined" &&
+            Dashboard.lastData &&
+            Dashboard.lastData.nama
+        ) {
+            kecamatan = Dashboard.lastData.nama;
+        } else if (
+            typeof Dashboard !== "undefined" &&
+            Dashboard.currentDistrict
+        ) {
+            kecamatan = Dashboard.currentDistrict;
+        }
+
+        modal.classList.add("show");
+
+        if (!kecamatan) {
+            this.currentKecamatan = null;
+            this.allItems = [];
+            this.activeFilter = "Semua";
+            this.setTitle("Fasyankes - Pilih Kecamatan");
+            this.renderEmpty();
+            return;
+        }
+
+        this.currentKecamatan = kecamatan;
+        this.setTitle("Fasyankes " + kecamatan);
+        this.showLoading();
+        this.load(kecamatan);
+    },
+
+    close: function() {
+
+        const modal = DOM.id("fasyankesModal");
+        if (modal) {
+            modal.classList.remove("show");
+        }
+    },
+
+    setTitle: function(text) {
+
+        const el = DOM.id("fasyankesModalTitle");
+        if (el) {
+            el.textContent = text;
+        }
+    },
+
+    showLoading: function() {
+
+        const list = DOM.id("fasyankesList");
+        if (!list) return;
+
+        list.innerHTML =
+            '<div class="faskes-empty">' +
+            '<i class="fas fa-spinner fa-spin"></i>' +
+            "<p>Memuat data fasyankes...</p>" +
+            "</div>";
+
+        const filters = DOM.id("fasyankesFilters");
+        if (filters) {
+            filters.innerHTML = "";
+        }
+    },
+
+    /* ==========================================================
+       LOAD DATA DARI API
+    ========================================================== */
+
+    load: function(kecamatan) {
+
+        const url =
+            "api/faskes.php?kecamatan=" +
+            encodeURIComponent(kecamatan) +
+            "&ts=" +
+            Date.now();
+
+        fetch(url, { cache: "no-store" })
+            .then(function(res) {
+                if (!res.ok) {
+                    throw new Error("HTTP " + res.status);
+                }
+                return res.json();
+            })
+            .then(function(json) {
+                if (json.status && json.data) {
+                    FasyankesModal.allItems = json.data || [];
+                    FasyankesModal.activeFilter = "Semua";
+                    FasyankesModal.renderFilters();
+                    FasyankesModal.renderList();
+                } else {
+                    FasyankesModal.allItems = [];
+                    FasyankesModal.renderFilters();
+                    FasyankesModal.renderEmpty();
+                }
+            })
+            .catch(function(err) {
+                Log.error("Gagal load fasyankes:", err);
+                FasyankesModal.renderError();
+            });
+    },
+
+    /* ==========================================================
+       GROUPING PER JENIS
+    ========================================================== */
+
+    groupItems: function() {
+
+        const order = ["Puskesmas", "Pustu", "Klinik", "Rumah Sakit"];
+        const groups = {};
+        const has = {};
+
+        this.allItems.forEach(function(item) {
+            const jenis = item.jenis || "Lainnya";
+            has[jenis] = true;
+            if (!groups[jenis]) {
+                groups[jenis] = [];
+            }
+            groups[jenis].push(item);
+        });
+
+        const keys = order.filter(function(k) {
+            return has[k];
+        });
+
+        Object.keys(groups).forEach(function(k) {
+            if (keys.indexOf(k) < 0) {
+                keys.push(k);
+            }
+        });
+
+        return {
+            keys: keys,
+            groups: groups
+        };
+    },
+
+    /* ==========================================================
+       FILTER CHIP
+    ========================================================== */
+
+    renderFilters: function() {
+
+        const wrap = DOM.id("fasyankesFilters");
+        if (!wrap) return;
+
+        const g = this.groupItems();
+        const total = this.allItems.length;
+
+        let html = "";
+
+        html +=
+            '<button class="faskes-chip' +
+            (this.activeFilter === "Semua" ? " active" : "") +
+            '" data-jenis="Semua">Semua (' +
+            Util.number(total) +
+            ")</button>";
+
+        g.keys.forEach(function(jenis) {
+
+            html +=
+                '<button class="faskes-chip' +
+                (FasyankesModal.activeFilter === jenis ? " active" : "") +
+                '" data-jenis="' +
+                FasyankesModal.escapeHtml(jenis) +
+                '">' +
+                FasyankesModal.escapeHtml(jenis) +
+                " (" +
+                (g.groups[jenis] || []).length +
+                ")</button>";
+        });
+
+        wrap.innerHTML = html;
+
+        Array.prototype.forEach.call(
+            wrap.querySelectorAll(".faskes-chip"),
+            function(btn) {
+
+                btn.addEventListener("click", function() {
+
+                    FasyankesModal.activeFilter =
+                        this.getAttribute("data-jenis");
+
+                    FasyankesModal.renderFilters();
+                    FasyankesModal.renderList();
+                });
+            }
+        );
+    },
+
+    /* ==========================================================
+       RENDER DAFTAR FASILITAS
+    ========================================================== */
+
+    renderList: function() {
+
+        const list = DOM.id("fasyankesList");
+        if (!list) return;
+
+        if (this.allItems.length === 0) {
+            this.renderEmpty();
+            return;
+        }
+
+        const g = this.groupItems();
+        const filter = this.activeFilter;
+        const keys = filter === "Semua" ? g.keys : [filter];
+
+        let html = "";
+
+        keys.forEach(function(jenis) {
+
+            const items = g.groups[jenis] || [];
+            if (items.length === 0) return;
+
+            html += '<div class="faskes-group">';
+            html +=
+                "<h5>" +
+                FasyankesModal.escapeHtml(jenis) +
+                " <span>" +
+                items.length +
+                " fasilitas</span></h5>";
+
+            items.forEach(function(item) {
+                html += FasyankesModal.renderItem(item);
+            });
+
+            html += "</div>";
+        });
+
+        list.innerHTML = html;
+    },
+
+    renderItem: function(item) {
+
+        const jenis = item.jenis || "Lainnya";
+
+        let badgeClass = "faskes-badge-lain";
+        if (jenis === "Puskesmas") badgeClass = "faskes-badge-puskesmas";
+        else if (jenis === "Pustu") badgeClass = "faskes-badge-pustu";
+        else if (jenis === "Klinik") badgeClass = "faskes-badge-klinik";
+        else if (jenis === "Rumah Sakit") badgeClass = "faskes-badge-rs";
+
+        let fotoHtml =
+            '<div class="faskes-photo"><i class="fas fa-hospital"></i></div>';
+
+        if (item.foto) {
+            fotoHtml =
+                '<div class="faskes-photo"><img src="uploads/faskes/' +
+                this.escapeHtml(item.foto) +
+                '" alt="Foto fasilitas"></div>';
+        }
+
+        let infoHtml = "";
+
+        if (item.alamat) {
+            infoHtml +=
+                '<p><i class="fas fa-map-marker-alt"></i> ' +
+                this.escapeHtml(item.alamat) +
+                "</p>";
+        }
+
+        if (item.telepon) {
+            infoHtml +=
+                '<p><i class="fas fa-phone"></i> ' +
+                this.escapeHtml(item.telepon) +
+                "</p>";
+        }
+
+        if (item.email) {
+            infoHtml +=
+                '<p><i class="fas fa-envelope"></i> ' +
+                this.escapeHtml(item.email) +
+                "</p>";
+        }
+
+        return (
+            '<div class="faskes-item">' +
+            fotoHtml +
+            '<div class="faskes-info">' +
+            "<h6>" +
+            this.escapeHtml(item.nama_faskes) +
+            '<span class="faskes-badge ' +
+            badgeClass +
+            '">' +
+            this.escapeHtml(jenis) +
+            "</span></h6>" +
+            infoHtml +
+            "</div></div>"
+        );
+    },
+
+    /* ==========================================================
+       EMPTY STATE / ERROR
+    ========================================================== */
+
+    renderEmpty: function() {
+
+        const list = DOM.id("fasyankesList");
+        if (!list) return;
+
+        const kecamatan = this.currentKecamatan;
+
+        let text =
+            "Pilih kecamatan pada peta terlebih dahulu, lalu klik card Fasyankes.";
+        let icon = "fa-map-marked-alt";
+
+        if (kecamatan) {
+            text =
+                "Belum ada fasilitas kesehatan terdaftar di " +
+                kecamatan +
+                ".";
+            icon = "fa-hospital";
+        }
+
+        list.innerHTML =
+            '<div class="faskes-empty">' +
+            '<i class="fas ' +
+            icon +
+            '"></i>' +
+            "<p>" +
+            text +
+            "</p>" +
+            "</div>";
+
+        this.renderFilters();
+    },
+
+    renderError: function() {
+
+        const list = DOM.id("fasyankesList");
+        if (!list) return;
+
+        list.innerHTML =
+            '<div class="faskes-empty">' +
+            '<i class="fas fa-triangle-exclamation"></i>' +
+            "<p>Gagal memuat data fasyankes. Coba lagi nanti.</p>" +
+            "</div>";
+    },
+
+    escapeHtml: function(v) {
+
+        return String(v == null ? "" : v)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+};
+
+/* ==========================================================
+   BAGIAN 8 - STARTUP ENGINE
+========================================================= */
 
 const Startup = {
     initialized: false,
@@ -1779,7 +2197,8 @@ const Startup = {
         MapEngine.init();
         Dashboard.init();
         PortalAPI.init();
-        PortalAPI.loadFasyankes(); 
+        PortalAPI.loadFasyankes();
+        FasyankesModal.init(); 
 
         Log.info("%cPORTAL TERPADU DKK SUKOHARJO", "color:#00d4ff;font-size:16px;font-weight:bold");
         Log.info("Version : " + Portal.version);

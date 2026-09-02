@@ -16,11 +16,16 @@ if (!$id) {
     exit;
 }
 
+// Bersihkan prefix kec_ jika ada
+if (strpos($id, 'kec_') === 0) {
+    $id = substr($id, 4);
+}
+
 $id = mysqli_real_escape_string($config, $id);
 
 /*
 |--------------------------------------------------------------------------
-| AMBIL DATA KECAMATAN (TANPA jumlah_kk)
+| AMBIL DATA DASAR KECAMATAN
 |--------------------------------------------------------------------------
 */
 
@@ -31,16 +36,11 @@ $sql = "SELECT
             jumlah_penduduk,
             jumlah_kk,
             jumlah_desa,
-            jumlah_puskesmas,
-            jumlah_pustu,
             jumlah_posyandu,
-            jumlah_klinik,
-            jumlah_rumah_sakit,
-            jumlah_rs,
             luas_wilayah,
             kepadatan
         FROM tbl_kecamatan
-        WHERE LOWER(nama_kecamatan) = LOWER('$id')
+        WHERE (LOWER(nama_kecamatan) = LOWER('$id') OR id_kecamatan = '$id')
         AND aktif = 'Y'
         LIMIT 1";
 
@@ -64,6 +64,31 @@ if (!$row) {
     exit;
 }
 
+$idKec = (int)$row['id_kecamatan'];
+$namaKec = mysqli_real_escape_string($config, $row['nama_kecamatan']);
+
+/*
+|--------------------------------------------------------------------------
+| HITUNG JUMLAH FASILITAS KESEHATAN SECARA DINAMIS DARI tbl_faskes
+|--------------------------------------------------------------------------
+*/
+$sqlFaskes = "SELECT 
+    SUM(CASE WHEN jenis = 'Puskesmas' THEN 1 ELSE 0 END) AS count_puskesmas,
+    SUM(CASE WHEN jenis = 'Pustu' THEN 1 ELSE 0 END) AS count_pustu,
+    SUM(CASE WHEN jenis = 'Klinik' THEN 1 ELSE 0 END) AS count_klinik,
+    SUM(CASE WHEN jenis = 'Rumah Sakit' THEN 1 ELSE 0 END) AS count_rs
+FROM tbl_faskes 
+WHERE (id_kecamatan = $idKec OR LOWER(kecamatan) = LOWER('$namaKec')) 
+AND aktif = 'Y'";
+
+$queryFaskes = mysqli_query($config, $sqlFaskes);
+$faskesCount = mysqli_fetch_assoc($queryFaskes);
+
+$puskesmas = (int)($faskesCount['count_puskesmas'] ?? 0);
+$pustu = (int)($faskesCount['count_pustu'] ?? 0);
+$klinik = (int)($faskesCount['count_klinik'] ?? 0);
+$rumah_sakit = (int)($faskesCount['count_rs'] ?? 0);
+
 // ============================================================
 // RESPONSE
 // ============================================================
@@ -71,7 +96,7 @@ if (!$row) {
 echo json_encode([
     'status' => true,
 
-    'id_kecamatan' => (int) $row['id_kecamatan'],
+    'id_kecamatan' => $idKec,
     'kode_kecamatan' => $row['kode_kecamatan'],
     'nama' => $row['nama_kecamatan'],
 
@@ -80,15 +105,15 @@ echo json_encode([
     'kk' => (int) $row['jumlah_kk'],
     'desa' => (int) $row['jumlah_desa'],
 
-    // FASYANKES
-    'puskesmas' => (int) $row['jumlah_puskesmas'],
-    'pustu' => (int) $row['jumlah_pustu'],
-    'klinik' => (int) $row['jumlah_klinik'],
-    'rumah_sakit' => (int) $row['jumlah_rumah_sakit'],
+    // FASYANKES (DIHITUNG DARI DATA RIIL tbl_faskes)
+    'puskesmas' => $puskesmas,
+    'pustu' => $pustu,
+    'klinik' => $klinik,
+    'rumah_sakit' => $rumah_sakit,
 
     // DATA TAMBAHAN
     'posyandu' => (int) $row['jumlah_posyandu'],
-    'rs' => (int) $row['jumlah_rs'],
+    'rs' => $rumah_sakit,
     'luas' => (float) $row['luas_wilayah'],
     'kepadatan' => (int) $row['kepadatan']
 ]);

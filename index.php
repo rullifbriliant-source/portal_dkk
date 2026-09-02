@@ -239,13 +239,15 @@
 
             <div class="portal-feature">
 
-                <div>
+                <div
+                    id="appFasyankes"
+                    class="feature-fasyankes">
 
                     <i class="fas fa-hospital fa-2x"></i>
 
                     <br><br>
 
-                    Puskesmas
+                    Fasyankes
 
                 </div>
 
@@ -291,7 +293,7 @@
 
                 <div class="stat-box">
                     <i class="fas fa-hospital"></i>
-                    <h4 id="statPuskesmas2">12</h4>
+                    <h4 id="statPuskesmas2">0</h4>
                     <p>Puskesmas</p>
                 </div>
 
@@ -647,6 +649,58 @@ id="footerBar">
                         🩺 Surveilans
 
                     </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =======================================================
+    MODAL FASYANKES PER KECAMATAN
+    ======================================================= -->
+
+    <div
+        class="apps-modal"
+        id="fasyankesModal">
+
+        <div class="apps-window faskes-window">
+
+            <div class="apps-header">
+
+                <h3>
+                    <i class="fas fa-hospital" style="color:#00d4ff;margin-right:10px;"></i>
+                    <span id="fasyankesModalTitle">Fasyankes</span>
+                </h3>
+
+                <button
+                    id="closeFasyankes"
+                    class="faskes-close">
+
+                    &times;
+
+                </button>
+
+            </div>
+
+            <div class="faskes-body">
+
+                <div
+                    class="faskes-filters"
+                    id="fasyankesFilters">
+
+                </div>
+
+                <div
+                    class="faskes-list"
+                    id="fasyankesList">
+
+                    <div class="faskes-empty">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <p>Pilih kecamatan pada peta terlebih dahulu.</p>
+                    </div>
 
                 </div>
 
