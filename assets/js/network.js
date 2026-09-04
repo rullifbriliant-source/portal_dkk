@@ -1,5 +1,9 @@
 "use strict";
 
+(function () {
+
+if (!document.getElementById("networkCanvas")) return; // halaman tanpa layer network: keluar diam-diam, jangan crash
+
 const netCanvas=document.getElementById("networkCanvas");
 const nctx=netCanvas.getContext("2d");
 
@@ -7,15 +11,84 @@ let particles=[];
 
 const TOTAL=60;
 
-resize();
+let viewW=0;
+let viewH=0;
 
-window.addEventListener("resize",resize);
+function viewport(){
+
+    return {
+
+        w: window.innerWidth || document.documentElement.clientWidth || 0,
+
+        h: window.innerHeight || document.documentElement.clientHeight || 0
+
+    };
+
+}
 
 function resize(){
 
-    netCanvas.width=window.innerWidth;
+    const vp=viewport();
 
-    netCanvas.height=window.innerHeight;
+    if (vp.w<=0||vp.h<=0) return;
+
+    let dpr=window.devicePixelRatio || 1;
+
+    if (!(dpr>0)) dpr=1;
+
+    const scaleX=viewW>0 ? vp.w/viewW : 1;
+
+    const scaleY=viewH>0 ? vp.h/viewH : 1;
+
+    viewW=vp.w;
+
+    viewH=vp.h;
+
+    netCanvas.width=Math.round(vp.w*dpr);
+
+    netCanvas.height=Math.round(vp.h*dpr);
+
+    nctx.setTransform(dpr,0,0,dpr,0,0);
+
+    particles.forEach(function(p){
+
+        p.x*=scaleX;
+
+        p.y*=scaleY;
+
+        if(p.x<0||p.x>viewW||p.y<0||p.y>viewH) p.reset();
+
+    });
+
+}
+
+resize();
+
+var resizeQueued=false;
+
+function scheduleResize(){
+
+    if(resizeQueued) return;
+
+    resizeQueued=true;
+
+    requestAnimationFrame(function(){
+
+        resizeQueued=false;
+
+        resize();
+
+    });
+
+}
+
+window.addEventListener("resize",scheduleResize);
+
+window.addEventListener("orientationchange",scheduleResize);
+
+if(window.visualViewport){
+
+    window.visualViewport.addEventListener("resize",scheduleResize);
 
 }
 
@@ -29,9 +102,9 @@ class Particle{
 
     reset(){
 
-        this.x=Math.random()*netCanvas.width;
+        this.x=Math.random()*(viewW || window.innerWidth);
 
-        this.y=Math.random()*netCanvas.height;
+        this.y=Math.random()*(viewH || window.innerHeight);
 
         this.vx=(Math.random()-.5)*0.4;
 
@@ -47,9 +120,9 @@ class Particle{
 
         this.y+=this.vy;
 
-        if(this.x<0||this.x>netCanvas.width) this.vx*=-1;
+        if(this.x<0||this.x>viewW) this.vx*=-1;
 
-        if(this.y<0||this.y>netCanvas.height) this.vy*=-1;
+        if(this.y<0||this.y>viewH) this.vy*=-1;
 
     }
 
@@ -109,7 +182,7 @@ function connect(){
 
 function animate(){
 
-    nctx.clearRect(0,0,netCanvas.width,netCanvas.height);
+    nctx.clearRect(0,0,viewW,viewH);
 
     particles.forEach(function(p){
 
@@ -126,3 +199,5 @@ function animate(){
 }
 
 animate();
+
+})();
