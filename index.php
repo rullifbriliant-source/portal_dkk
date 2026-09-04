@@ -261,7 +261,13 @@
 
                 </div>
 
-                <div>
+                <div
+                    id="appDashboard"
+                    onclick="window.location.href='admin/login.php'"
+                    title="Login Admin"
+                    role="link"
+                    tabindex="0"
+                    onkeydown="if(event.key==='Enter'){window.location.href='admin/login.php'}">
 
                     <i class="fas fa-chart-line fa-2x"></i>
 
