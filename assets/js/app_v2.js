@@ -2294,6 +2294,193 @@ const FasyankesModal = {
 };
 
 /* ==========================================================
+   SDM MODAL — Detail per Fasyankes (Kecamatan → Fasyankes → SDM)
+========================================================== */
+
+const SdmModal = {
+    currentKecamatan: null,
+    data: null,
+    activeJenis: "Semua",
+
+    init: function() {
+        const appSdm = DOM.id("appSdm");
+        if (appSdm) {
+            appSdm.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); SdmModal.open(); });
+            appSdm.addEventListener("keydown", function(e){ if(e.key==="Enter") SdmModal.open(); });
+            // Active state konsisten dengan Fasyankes
+            appSdm.addEventListener("click", function(){
+                Array.prototype.forEach.call(document.querySelectorAll(".portal-feature div"), function(el){ el.classList.remove("active"); });
+                appSdm.classList.add("active");
+            });
+        }
+        const closeBtn = DOM.id("closeSdm");
+        if (closeBtn) closeBtn.addEventListener("click", function(){ SdmModal.close(); });
+        const modal = DOM.id("sdmModal");
+        if (modal) modal.addEventListener("click", function(e){ if(e.target===modal) SdmModal.close(); });
+        document.addEventListener("keydown", function(e){ if(e.key==="Escape") SdmModal.close(); });
+        Log.info("SdmModal Ready");
+    },
+
+    open: function() {
+        const modal = DOM.id("sdmModal");
+        if (!modal) return;
+        let kecamatan = null;
+        if (typeof Dashboard!=="undefined" && Dashboard.lastData && Dashboard.lastData.nama) kecamatan = Dashboard.lastData.nama;
+        else if (typeof Dashboard!=="undefined" && Dashboard.currentDistrict) kecamatan = Dashboard.currentDistrict;
+        else if (typeof MapEngine!=="undefined" && MapEngine.current) kecamatan = MapEngine.current;
+
+        // normalisasi kec_ prefix
+        if (kecamatan && kecamatan.indexOf("kec_")===0) kecamatan = kecamatan.substring(4);
+        // mapping lowercase → TitleCase
+        const map = {mojolaban:"Mojolaban",baki:"Baki",gatak:"Gatak",bendosari:"Bendosari",polokarto:"Polokarto",grogol:"Grogol",kartasura:"Kartasura",sukoharjo:"Sukoharjo",tawangsari:"Tawangsari",bulu:"Bulu",weru:"Weru",nguter:"Nguter"};
+        if (kecamatan && map[kecamatan.toLowerCase()]) kecamatan = map[kecamatan.toLowerCase()];
+
+        modal.classList.add("show");
+        const app = DOM.id("appSdm");
+        if (app) app.classList.add("active");
+
+        if (!kecamatan) {
+            this.currentKecamatan = null;
+            this.setTitle("SDM — Pilih Kecamatan");
+            this.renderEmpty("Pilih kecamatan pada peta terlebih dahulu.");
+            return;
+        }
+        this.currentKecamatan = kecamatan;
+        this.setTitle("SDM — " + kecamatan);
+        this.showLoading();
+        this.load(kecamatan);
+    },
+
+    close: function(){
+        const modal = DOM.id("sdmModal");
+        if (modal) modal.classList.remove("show");
+        const app = DOM.id("appSdm");
+        if (app) app.classList.remove("active");
+    },
+
+    setTitle: function(t){ const el=DOM.id("sdmModalTitle"); if(el) el.textContent=t; },
+
+    showLoading: function(){
+        const list=DOM.id("sdmList"); if(list) list.innerHTML='<div class="faskes-empty"><i class="fas fa-spinner fa-spin"></i><p>Memuat data SDM...</p></div>';
+        const sum=DOM.id("sdmModalSummary"); if(sum) sum.innerHTML='';
+        const f=DOM.id("sdmFilters"); if(f) f.innerHTML='';
+    },
+
+    load: function(kecamatan){
+        const url="api/get_sdm.php?kecamatan="+encodeURIComponent(kecamatan)+"&ts="+Date.now();
+        fetch(url,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(function(json){
+            if(json.status){
+                SdmModal.data=json;
+                SdmModal.activeJenis="Semua";
+                SdmModal.renderSummary(json);
+                SdmModal.renderFilters(json);
+                SdmModal.renderList(json);
+            } else { SdmModal.renderEmpty("Data tidak ditemukan."); }
+        }).catch(function(err){ Log.error("Gagal load SDM modal",err); SdmModal.renderError(); });
+    },
+
+    renderSummary: function(json){
+        const el=DOM.id("sdmModalSummary"); if(!el) return;
+        const total = json.total ?? 0;
+        const per = json.total_per_jenis || json.data || [];
+        let html='<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL SDM '+this.escapeHtml(json.kecamatan||'')+'</div><div style="font-size:24px;font-weight:700;color:#fff;">'+Util.number(total)+' <span style="font-size:11px;color:rgba(255,255,255,0.5);">orang</span></div><div style="font-size:11px;color:rgba(255,255,255,0.4);">Sumber: '+this.escapeHtml(json.source||'')+'</div></div>';
+        html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
+        per.forEach(function(p){
+            html+='<span style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:12px;color:#fff;">'+SdmModal.escapeHtml(p.nama)+' <b style="color:#00d4ff;">'+Util.number(p.nilai)+'</b></span>';
+        });
+        html+='</div>';
+        // Spesialis breakdown jika ada
+        if(json.spesialis && json.spesialis.length>0){
+            html+='<div style="width:100%;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
+            html+='<span style="font-size:11px;color:#ffd54f;font-weight:600;letter-spacing:0.5px;"><i class="fas fa-user-doctor"></i> Spesialis Dokter:</span>';
+            json.spesialis.forEach(function(s){
+                const label = s.kode ? s.kode : s.nama;
+                html+='<span style="padding:5px 9px;background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.2);border-radius:8px;font-size:11px;color:#ffd54f;" title="'+SdmModal.escapeHtml(s.nama)+'">'+SdmModal.escapeHtml(label)+' <b>'+Util.number(s.nilai)+'</b></span>';
+            });
+            html+='</div>';
+        }
+        el.innerHTML=html;
+    },
+
+    renderFilters: function(json){
+        const wrap=DOM.id("sdmFilters"); if(!wrap) return;
+        const jenisSet = {};
+        (json.total_per_jenis||[]).forEach(function(p){ jenisSet[p.nama]=true; });
+        // juga dari faskes per_jenis
+        const allJenis = Object.keys(jenisSet);
+        let html='<button class="faskes-chip'+(this.activeJenis==="Semua"?" active":"")+'" data-jenis="Semua">Semua ('+Util.number(json.faskes?json.faskes.length:0)+' faskes)</button>';
+        allJenis.forEach(function(j){
+            html+='<button class="faskes-chip'+(SdmModal.activeJenis===j?' active':'')+'" data-jenis="'+SdmModal.escapeHtml(j)+'">'+SdmModal.escapeHtml(j)+'</button>';
+        });
+        wrap.innerHTML=html;
+        Array.prototype.forEach.call(wrap.querySelectorAll(".faskes-chip"), function(btn){
+            btn.addEventListener("click", function(){
+                SdmModal.activeJenis=this.getAttribute("data-jenis");
+                SdmModal.renderFilters(json);
+                SdmModal.renderList(json);
+            });
+        });
+    },
+
+    renderList: function(json){
+        const list=DOM.id("sdmList"); if(!list) return;
+        const faskes=json.faskes||[];
+        if(faskes.length===0){
+            list.innerHTML='<div class="faskes-empty"><i class="fas fa-users"></i><p>Belum ada data SDM per fasyankes di '+this.escapeHtml(json.kecamatan||'')+'. Tambahkan di Admin → SDM → SDM per Fasyankes.</p></div>';
+            return;
+        }
+        let html='';
+        faskes.forEach(function(f){
+            // filter jenis
+            let per = f.per_jenis || [];
+            if(SdmModal.activeJenis!=="Semua"){
+                per = per.filter(function(p){ return p.nama===SdmModal.activeJenis; });
+                // jika filter aktif dan faskes ini 0 untuk jenis itu, skip? tetap tampil tapi highlight
+                if(per.length===1 && per[0].nilai===0) return;
+            }
+            const total = f.total;
+            if(SdmModal.activeJenis!=="Semua"){
+                // hitung total filtered
+                const v = per[0]?per[0].nilai:0;
+                if(v===0) return;
+            }
+            html+='<div class="faskes-group" style="margin-bottom:14px;">';
+            html+='<h5 style="display:flex;justify-content:space-between;align-items:center;"><span>'+SdmModal.escapeHtml(f.nama_faskes)+' <span style="font-weight:400;color:rgba(255,255,255,0.4);font-size:11px;">('+SdmModal.escapeHtml(f.jenis)+')</span></span><span style="background:rgba(0,212,255,0.12);color:#00d4ff;padding:4px 10px;border-radius:20px;font-size:11px;">'+Util.number(total)+' orang</span></h5>';
+            html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px;">';
+            (f.per_jenis||[]).forEach(function(p){
+                if(SdmModal.activeJenis!=="Semua" && p.nama!==SdmModal.activeJenis) return;
+                const isZero = p.nilai===0;
+                html+='<div style="padding:8px 10px;background:'+(isZero?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)')+';border:1px solid rgba(255,255,255,0.06);border-radius:8px;display:flex;justify-content:space-between;align-items:center;opacity:'+(isZero?'0.5':'1')+';"><span style="font-size:12px;color:rgba(255,255,255,0.8);">'+SdmModal.escapeHtml(p.nama)+'</span><span style="font-weight:700;color:'+(isZero?'rgba(255,255,255,0.4)':'#72e8ff')+';">'+Util.number(p.nilai)+'</span></div>';
+            });
+            html+='</div>';
+            // Spesialis per faskes jika ada
+            if(f.per_spesialis && f.per_spesialis.length>0){
+                html+='<div style="margin-top:8px;padding:8px 10px;background:rgba(255,193,7,0.07);border:1px solid rgba(255,193,7,0.15);border-radius:10px;">';
+                html+='<div style="font-size:10px;color:#ffd54f;font-weight:600;letter-spacing:0.5px;margin-bottom:6px;"><i class="fas fa-stethoscope"></i> SPESIALIS DOKTER</div>';
+                html+='<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+                f.per_spesialis.forEach(function(s){
+                    const label = s.kode ? s.kode : s.nama;
+                    html+='<span style="padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:11px;color:#ffd54f;" title="'+SdmModal.escapeHtml(s.nama)+'">'+SdmModal.escapeHtml(label)+' <b style="color:#fff;">'+Util.number(s.nilai)+'</b></span>';
+                });
+                html+='</div></div>';
+            }
+            html+='</div>';
+        });
+        if(!html) html='<div class="faskes-empty"><i class="fas fa-filter"></i><p>Tidak ada data untuk filter "'+this.escapeHtml(this.activeJenis)+'"</p></div>';
+        list.innerHTML=html;
+    },
+
+    renderEmpty: function(msg){
+        const list=DOM.id("sdmList"); if(list) list.innerHTML='<div class="faskes-empty"><i class="fas fa-map-marked-alt"></i><p>'+this.escapeHtml(msg)+'</p></div>';
+    },
+    renderError: function(){
+        const list=DOM.id("sdmList"); if(list) list.innerHTML='<div class="faskes-empty"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data SDM.</p></div>';
+    },
+    escapeHtml: FasyankesModal.escapeHtml
+};
+
+/* ==========================================================
    BAGIAN 8 - STARTUP ENGINE
 ========================================================= */
 
@@ -2318,7 +2505,8 @@ const Startup = {
         Dashboard.init();
         PortalAPI.init();
         PortalAPI.loadFasyankes();
-        FasyankesModal.init(); 
+        FasyankesModal.init();
+        SdmModal.init();
 
         Log.info("%cPORTAL TERPADU DKK SUKOHARJO", "color:#00d4ff;font-size:16px;font-weight:bold");
         Log.info("Version : " + Portal.version);

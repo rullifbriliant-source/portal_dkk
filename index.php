@@ -251,7 +251,12 @@
 
                 </div>
 
-                <div>
+                <div
+                    id="appSdm"
+                    class="feature-sdm"
+                    title="Lihat detail SDM per Fasyankes"
+                    role="button"
+                    tabindex="0">
 
                     <i class="fas fa-users fa-2x"></i>
 
@@ -716,6 +721,29 @@ id="footerBar">
 
         </div>
 
+    </div>
+
+    <!-- =======================================================
+    MODAL SDM PER FASYANKES
+    ======================================================= -->
+
+    <div class="apps-modal" id="sdmModal">
+        <div class="apps-window faskes-window" style="max-width:720px;">
+            <div class="apps-header">
+                <h3>
+                    <i class="fas fa-user-doctor" style="color:#00d4ff;margin-right:10px;"></i>
+                    <span id="sdmModalTitle">SDM Kesehatan</span>
+                </h3>
+                <button id="closeSdm" class="faskes-close">&times;</button>
+            </div>
+            <div class="faskes-body">
+                <div id="sdmModalSummary" style="padding:12px 16px;margin-bottom:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:12px;display:flex;gap:16px;flex-wrap:wrap;"></div>
+                <div class="faskes-filters" id="sdmFilters"></div>
+                <div class="faskes-list" id="sdmList">
+                    <div class="faskes-empty"><i class="fas fa-users"></i><p>Pilih kecamatan pada peta terlebih dahulu.</p></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- =======================================================
