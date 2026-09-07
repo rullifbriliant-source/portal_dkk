@@ -2384,13 +2384,25 @@ const SdmModal = {
         const el=DOM.id("sdmModalSummary"); if(!el) return;
         const total = json.total ?? 0;
         const per = json.total_per_jenis || json.data || [];
-        let html='<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL SDM '+this.escapeHtml(json.kecamatan||'')+'</div><div style="font-size:24px;font-weight:700;color:#fff;">'+Util.number(total)+' <span style="font-size:11px;color:rgba(255,255,255,0.5);">orang</span></div><div style="font-size:11px;color:rgba(255,255,255,0.4);">Sumber: '+this.escapeHtml(json.source||'')+'</div></div>';
-        html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
-        per.forEach(function(p){
-            html+='<span style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:12px;color:#fff;">'+SdmModal.escapeHtml(p.nama)+' <b style="color:#00d4ff;">'+Util.number(p.nilai)+'</b></span>';
-        });
+        // Hitung kategori totals: pakai json.kategori_totals jika ada, else hitung dari per[].kategori
+        let katTotals = json.kategori_totals || null;
+        if(!katTotals){
+            katTotals={'Tenaga Kesehatan':0,'Asisten Tenaga Kesehatan':0,'Tenaga Penunjang':0};
+            per.forEach(function(p){
+                const k = p.kategori || 'Tenaga Kesehatan';
+                if(katTotals[k]!==undefined) katTotals[k]+= (parseInt(p.nilai,10)||0);
+                else katTotals[k]= (parseInt(p.nilai,10)||0);
+            });
+        }
+        // Header total
+        let html='<div style="flex:1;min-width:160px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL SDM '+this.escapeHtml(json.kecamatan||'')+'</div><div style="font-size:24px;font-weight:700;color:#fff;">'+Util.number(total)+' <span style="font-size:11px;color:rgba(255,255,255,0.5);">orang</span></div></div>';
+        // 3 mini stat kategori (hanya tampilkan, 0 tetap tampil tapi sebagai angka)
+        html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;min-width:260px;flex:1;">';
+        html+='<div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:10px;color:#87e3ff;letter-spacing:0.5px">A. Tenaga Kesehatan</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:2px">'+Util.number(katTotals['Tenaga Kesehatan']||0)+'</div></div>';
+        html+='<div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:10px;color:#ffd54f;letter-spacing:0.5px">B. Asisten</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:2px">'+Util.number(katTotals['Asisten Tenaga Kesehatan']||0)+'</div></div>';
+        html+='<div style="background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:10px;color:#81c784;letter-spacing:0.5px">C. Penunjang</div><div style="font-size:18px;font-weight:800;color:#fff;margin-top:2px">'+Util.number(katTotals['Tenaga Penunjang']||0)+'</div></div>';
         html+='</div>';
-        // Spesialis breakdown jika ada
+        // Spesialis ringkas (hanya tampil jika ada & nilai>0, tidak 27 badges)
         if(json.spesialis && json.spesialis.length>0){
             html+='<div style="width:100%;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
             html+='<span style="font-size:11px;color:#ffd54f;font-weight:600;letter-spacing:0.5px;"><i class="fas fa-user-doctor"></i> Spesialis Dokter:</span>';
@@ -2400,6 +2412,21 @@ const SdmModal = {
             });
             html+='</div>';
         }
+        // Collapsible rincian per jenis (default tertutup, hanya non-zero)
+        const nonZero = per.filter(function(p){ return (parseInt(p.nilai,10)||0)>0; });
+        const rincianCount = nonZero.length;
+        html+='<details style="width:100%;margin-top:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 12px;">';
+        html+='<summary style="cursor:pointer;font-size:12px;color:#72e8ff;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center">Lihat rincian per jenis SDM ('+rincianCount+' jenis &gt;0) <span style="font-size:10px;color:rgba(255,255,255,0.4)">▾ klik untuk buka/tutup</span></summary>';
+        if(rincianCount>0){
+            html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">';
+            nonZero.forEach(function(p){
+                html+='<span style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:12px;color:#fff;">'+SdmModal.escapeHtml(p.nama)+' <b style="color:#00d4ff;">'+Util.number(p.nilai)+'</b></span>';
+            });
+            html+='</div>';
+        } else {
+            html+='<div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,0.4)">Belum ada data rincian &gt;0. Isi via Admin → Rekap SDMK Puskesmas.</div>';
+        }
+        html+='</details>';
         el.innerHTML=html;
     },
 
@@ -2407,27 +2434,30 @@ const SdmModal = {
         const wrap=DOM.id("sdmFilters"); if(!wrap) return;
         const jenisSet = {};
         (json.total_per_jenis||[]).forEach(function(p){ jenisSet[p.nama]=true; });
-        // juga dari faskes per_jenis
-        const allJenis = Object.keys(jenisSet);
-        let html='<button class="faskes-chip'+(this.activeJenis==="Semua"?" active":"")+'" data-jenis="Semua">Semua ('+Util.number(json.faskes?json.faskes.length:0)+' faskes)</button>';
+        const allJenis = Object.keys(jenisSet).sort();
+        // Ganti chips → dropdown
+        let html='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%"><label for="sdmFilterSelect" style="font-size:12px;color:#87e3ff;font-weight:600">Filter jenis:</label>';
+        html+='<select id="sdmFilterSelect" style="flex:1;min-width:180px;padding:8px 12px;border-radius:10px;border:1px solid rgba(0,212,255,0.4);background:#0b223c;color:#fff;font-size:12px;font-weight:600"><option value="Semua">Semua ('+Util.number(json.faskes?json.faskes.length:0)+' faskes)</option>';
         allJenis.forEach(function(j){
-            html+='<button class="faskes-chip'+(SdmModal.activeJenis===j?' active':'')+'" data-jenis="'+SdmModal.escapeHtml(j)+'">'+SdmModal.escapeHtml(j)+'</button>';
+            const sel = SdmModal.activeJenis===j?' selected':'';
+            html+='<option value="'+SdmModal.escapeHtml(j)+'"'+sel+'>'+SdmModal.escapeHtml(j)+'</option>';
         });
+        html+='</select></div>';
         wrap.innerHTML=html;
-        Array.prototype.forEach.call(wrap.querySelectorAll(".faskes-chip"), function(btn){
-            btn.addEventListener("click", function(){
-                SdmModal.activeJenis=this.getAttribute("data-jenis");
-                SdmModal.renderFilters(json);
+        const sel=DOM.id("sdmFilterSelect");
+        if(sel){
+            sel.addEventListener("change", function(){
+                SdmModal.activeJenis=this.value;
                 SdmModal.renderList(json);
             });
-        });
+        }
     },
 
     renderList: function(json){
         const list=DOM.id("sdmList"); if(!list) return;
         const faskes=json.faskes||[];
         if(faskes.length===0){
-            list.innerHTML='<div class="faskes-empty"><i class="fas fa-users"></i><p>Belum ada data SDM per fasyankes di '+this.escapeHtml(json.kecamatan||'')+'. Tambahkan di Admin → SDM → SDM per Fasyankes.</p></div>';
+            list.innerHTML='<div class="faskes-empty"><i class="fas fa-users"></i><p>Belum ada data SDM per fasyankes di '+this.escapeHtml(json.kecamatan||'')+'. Tambahkan di Admin → SDM → SDMK.</p></div>';
             return;
         }
         let html='';

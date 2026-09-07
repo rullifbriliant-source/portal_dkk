@@ -1,4 +1,5 @@
 <?php
+// LEGACY - pertimbangkan untuk dihapus/digabung juga ke sdmk.php di iterasi berikutnya jika CRUD jenis SDM lama & SDMK per kecamatan sudah tidak dipakai lagi.
 require_once '../config.php';
 requireLogin();
 $current_page = basename($_SERVER['PHP_SELF']);
@@ -144,102 +145,13 @@ if (isset($_GET['delete_sp'])) {
 }
 
 // ============================================================
-// PROSES SDM PER FASYANKES (BARU) — tbl_sdm_faskes
-// Kecamatan → Fasyankes → Jenis SDM → Jumlah
-// Validasi: fasyankes harus berada di kecamatan yang dipilih
+// SDM PER FASYANKES DIPINDAHKAN KE admin/crud/sdmk.php
 // ============================================================
-if (isset($_POST['add_sdm_faskes'])) {
-    $id_kecamatan = (int)($_POST['id_kecamatan'] ?? 0);
-    $id_faskes    = (int)($_POST['id_faskes'] ?? 0);
-    $id_profesi   = (int)($_POST['id_profesi'] ?? 0);
-    $id_spesialis = isset($_POST['id_spesialis']) && $_POST['id_spesialis'] !== '' ? (int)$_POST['id_spesialis'] : null;
-    $jumlah       = (int)($_POST['jumlah'] ?? 0);
-    $msg_faskes = '';
-    if ($id_kecamatan && $id_faskes && $id_profesi) {
-        // Validasi faskes milik kecamatan (prepared statement)
-        $cek = $config->prepare("SELECT id_kecamatan FROM tbl_faskes WHERE id_faskes=? AND aktif='Y' LIMIT 1");
-        $cek->bind_param("i", $id_faskes);
-        $cek->execute();
-        $resCek = $cek->get_result()->fetch_assoc();
-        if (!$resCek) {
-            $msg_faskes = 'faskes_not_found';
-        } elseif ((int)$resCek['id_kecamatan'] !== $id_kecamatan) {
-            $msg_faskes = 'kecamatan_mismatch';
-        } else {
-            // Validasi profesi aktif
-            $cekP = $config->prepare("SELECT id, nama_item FROM tbl_sdm_items WHERE id=? AND aktif='Y' LIMIT 1");
-            $cekP->bind_param("i", $id_profesi);
-            $cekP->execute();
-            $profRow = $cekP->get_result()->fetch_assoc();
-            if (!$profRow) {
-                $msg_faskes = 'profesi_not_found';
-            } else {
-                // Validasi spesialis: hanya relevan jika Dokter (nama mengandung dokter), jika bukan dokter paksa NULL
-                $isDokter = stripos($profRow['nama_item'], 'dokter') !== false;
-                if (!$isDokter) $id_spesialis = null;
-                if ($id_spesialis !== null) {
-                    $cekS = $config->prepare("SELECT id FROM tbl_spesialis WHERE id=? AND aktif='Y' LIMIT 1");
-                    $cekS->bind_param("i", $id_spesialis);
-                    $cekS->execute();
-                    if (!$cekS->get_result()->fetch_assoc()) {
-                        $msg_faskes = 'spesialis_not_found';
-                    }
-                }
-                if (!$msg_faskes) {
-                    // ON DUPLICATE KEY untuk kombinasi (id_faskes, id_profesi, id_spesialis)
-                    // Jika id_spesialis NULL, MySQL UNIQUE memperlakukan NULL != NULL, jadi gunakan INSERT ... ON DUPLICATE KEY hanya untuk non-NULL;
-                    // untuk NULL kita cek manual UPDATE jika sudah ada baris dengan NULL
-                    if ($id_spesialis === null) {
-                        $cekExist = $config->prepare("SELECT id FROM tbl_sdm_faskes WHERE id_faskes=? AND id_profesi=? AND id_spesialis IS NULL AND aktif='Y' LIMIT 1");
-                        $cekExist->bind_param("ii", $id_faskes, $id_profesi);
-                        $cekExist->execute();
-                        $existRow = $cekExist->get_result()->fetch_assoc();
-                        if ($existRow) {
-                            $stmt = $config->prepare("UPDATE tbl_sdm_faskes SET jumlah=?, id_kecamatan=?, aktif='Y' WHERE id=?");
-                            $stmt->bind_param("iii", $jumlah, $id_kecamatan, $existRow['id']);
-                            $stmt->execute();
-                        } else {
-                            $stmt = $config->prepare("INSERT INTO tbl_sdm_faskes (id_kecamatan, id_faskes, id_profesi, id_spesialis, jumlah) VALUES (?, ?, ?, NULL, ?)");
-                            $stmt->bind_param("iiii", $id_kecamatan, $id_faskes, $id_profesi, $jumlah);
-                            $stmt->execute();
-                        }
-                    } else {
-                        $stmt = $config->prepare("INSERT INTO tbl_sdm_faskes (id_kecamatan, id_faskes, id_profesi, id_spesialis, jumlah) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE jumlah=VALUES(jumlah), aktif='Y', id_kecamatan=VALUES(id_kecamatan)");
-                        $stmt->bind_param("iiiii", $id_kecamatan, $id_faskes, $id_profesi, $id_spesialis, $jumlah);
-                        $stmt->execute();
-                    }
-                    header("Location: sdm.php?msg_faskes=saved#cardSdmFaskes");
-                    exit;
-                }
-            }
-        }
-        if ($msg_faskes) {
-            header("Location: sdm.php?msg_faskes=" . $msg_faskes . "#cardSdmFaskes");
-            exit;
-        }
-    } else {
-        header("Location: sdm.php?msg_faskes=invalid#cardSdmFaskes");
-        exit;
-    }
-}
-if (isset($_POST['edit_sdm_faskes'])) {
-    $edit_id    = (int)($_POST['edit_id'] ?? 0);
-    $jumlah     = (int)($_POST['edit_jumlah'] ?? 0);
-    if ($edit_id) {
-        $stmt = $config->prepare("UPDATE tbl_sdm_faskes SET jumlah=? WHERE id=?");
-        $stmt->bind_param("ii", $jumlah, $edit_id);
-        $stmt->execute();
-    }
-    header("Location: sdm.php?msg_faskes=updated");
-    exit;
-}
-if (isset($_GET['delete_faskes'])) {
-    $del_id = (int)$_GET['delete_faskes'];
-    // soft delete
-    mysqli_query($config, "UPDATE tbl_sdm_faskes SET aktif='N' WHERE id=$del_id");
-    header("Location: sdm.php?msg_faskes=deleted");
-    exit;
-}
+// Handler add_sdm_faskes / edit_sdm_faskes / delete_faskes yang lama menulis
+// langsung ke kolom `jumlah` (GENERATED COLUMN) telah DIHAPUS untuk mencegah
+// silent failure. Kelola SDMK per Fasyankes sekarang hanya via sdmk.php (tab faskes).
+// yang menulis ke asn_l/asn_p/nonasn_l/nonasn_p dengan validasi & transaction.
+// Blok ini sengaja dikosongkan — jangan tambah handler tbl_sdm_faskes di sini.
 
 // ============================================================
 // AMBIL DAFTAR KECAMATAN + TOTAL SDMK PER KECAMATAN (tanpa cross-join, berkorelasi)
@@ -610,7 +522,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
+        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM (legacy)</a></li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
@@ -801,175 +714,23 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         </table>
     </div>
 
-    <!-- FORM SDM PER FASYANKES (BARU) — Kecamatan → Fasyankes → Jenis → Spesialis → Jumlah -->
-    <div class="card" id="cardSdmFaskes">
-        <h3><i class="fas fa-hospital-user" style="color:#00d4ff;margin-right:10px;"></i>SDM per Fasyankes — Kecamatan → Fasyankes → Jenis → Spesialis → Jumlah</h3>
-        <p style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:16px;">Pilih Kecamatan, lalu Fasyankes otomatis terfilter hanya fasilitas di kecamatan tersebut. Kolom <strong>Spesialis</strong> hanya wajib jika Jenis = Dokter / Dokter Gigi; untuk profesi lain akan otomatis diabaikan.</p>
-
-        <?php if (isset($_GET['msg_faskes'])): ?>
-            <?php if ($_GET['msg_faskes']==='saved'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Data SDM per fasyankes berhasil disimpan!</div>
-            <?php elseif ($_GET['msg_faskes']==='updated'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Jumlah berhasil diperbarui!</div>
-            <?php elseif ($_GET['msg_faskes']==='deleted'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil dihapus (soft delete)!</div>
-            <?php elseif ($_GET['msg_faskes']==='kecamatan_mismatch'): ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Gagal: Fasyankes tidak berada di kecamatan yang dipilih (validasi keamanan).</div>
-            <?php elseif ($_GET['msg_faskes']==='faskes_not_found'): ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Fasyankes tidak ditemukan / tidak aktif.</div>
-            <?php elseif ($_GET['msg_faskes']==='spesialis_not_found'): ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Spesialis tidak ditemukan / tidak aktif.</div>
-            <?php else: ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Gagal menyimpan. Periksa input.</div>
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <form method="POST" id="formSdmFaskes">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Kecamatan *</label>
-                    <select name="id_kecamatan" id="selKecamatan" required>
-                        <option value="">-- Pilih Kecamatan --</option>
-                        <?php foreach ($allKecamatan as $kc): ?>
-                            <option value="<?php echo $kc['id_kecamatan']; ?>"><?php echo htmlspecialchars($kc['nama_kecamatan']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Fasyankes *</label>
-                    <select name="id_faskes" id="selFaskes" required disabled>
-                        <option value="">-- Pilih Kecamatan dulu --</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Jenis SDM *</label>
-                    <select name="id_profesi" id="selProfesi" required>
-                        <option value="">-- Pilih Jenis --</option>
-                        <?php foreach ($items as $it): ?>
-                            <option value="<?php echo $it['id']; ?>" data-nama="<?php echo htmlspecialchars(strtolower($it['nama_item'])); ?>"><?php echo htmlspecialchars($it['nama_item']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group" id="groupSpesialis">
-                    <label>Spesialis <span style="font-weight:400;color:rgba(255,255,255,0.4);">(hanya untuk Dokter)</span></label>
-                    <select name="id_spesialis" id="selSpesialis">
-                        <option value="">-- Umum / Tidak Spesialis --</option>
-                        <?php foreach ($spesialisList as $sp): ?>
-                            <option value="<?php echo $sp['id']; ?>"><?php echo htmlspecialchars($sp['nama_spesialis']); ?><?php echo $sp['kode'] ? ' ('.htmlspecialchars($sp['kode']).')' : ''; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Jumlah *</label>
-                    <input type="number" name="jumlah" min="0" value="0" required>
-                </div>
-            </div>
-            <div style="margin-top:16px;">
-                <button type="submit" name="add_sdm_faskes" class="btn-primary"><i class="fas fa-save"></i> Simpan SDM Fasyankes</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- TABEL SDM PER FASYANKES -->
-    <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-            <h3 style="margin:0;"><i class="fas fa-table" style="color:#00d4ff;margin-right:10px;"></i>Daftar SDM per Fasyankes</h3>
-            <form method="GET" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <select name="kec_faskes" onchange="this.form.submit()" style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.1);">
-                    <option value="">Semua Kecamatan</option>
-                    <?php foreach ($allKecamatan as $kc): ?>
-                        <option value="<?php echo $kc['id_kecamatan']; ?>" <?php echo $filterKecFaskes==(int)$kc['id_kecamatan']?'selected':''; ?>><?php echo htmlspecialchars($kc['nama_kecamatan']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <select name="filter_sp" onchange="this.form.submit()" style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.1);">
-                    <option value="">Semua Spesialis</option>
-                    <option value="umum" <?php echo isset($_GET['filter_sp']) && $_GET['filter_sp']==='umum'?'selected':''; ?>>Umum (tanpa spesialis)</option>
-                    <?php foreach ($spesialisList as $sp): ?>
-                        <option value="<?php echo $sp['id']; ?>" <?php echo $filterSpesialis==(int)$sp['id']?'selected':''; ?>><?php echo htmlspecialchars($sp['nama_spesialis']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if ($filterKecFaskes || $filterSpesialis || $filterSpesialisIsUmum): ?><a href="sdm.php#cardSdmFaskes" class="btn-icon btn-danger">Reset</a><?php endif; ?>
-            </form>
+    <!-- SDM PER FASYANKES DIPINDAHKAN -->
+    <div class="card" style="border:1px solid rgba(255,193,7,0.25);background:linear-gradient(135deg, rgba(255,193,7,0.08), rgba(255,152,0,0.04));">
+        <h3 style="color:#ffd54f"><i class="fas fa-arrow-right" style="color:#ffd54f"></i> Kelola SDMK per Puskesmas dipindahkan</h3>
+        <p style="color:rgba(255,255,255,0.7);font-size:13px;line-height:1.7">
+            Form <strong>SDM per Fasyankes</strong> yang lama di halaman ini telah <strong>dinonaktifkan</strong> karena menulis langsung ke kolom <code style="background:rgba(255,82,82,0.15);padding:2px 6px;border-radius:6px;color:#ff8a80">jumlah</code>
+            yang sekarang adalah <strong>GENERATED COLUMN</strong> (<code>asn_l+asn_p+nonasn_l+nonasn_p</code>) dan menyebabkan <em>silent failure</em>.
+        </p>
+        <p style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:8px">Silakan kelola data SDMK per Fasyankes (semua jenis) via halaman terpadu — Master & Rekap dalam satu file:</p>
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+            <a href="sdmk.php?tab=faskes" class="btn-primary" style="background:linear-gradient(135deg,#FF9800,#EF6C00)"><i class="fas fa-hospital-user"></i> Buka SDMK Terpadu</a>
+            <a href="sdmk.php?tab=items" class="btn-primary" style="background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.25)"><i class="fas fa-list"></i> Master Jenis SDM</a>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Kecamatan</th>
-                    <th>Fasyankes</th>
-                    <th>Jenis</th>
-                    <th>Spesialis</th>
-                    <th>Jumlah</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($sdmFaskesList)>0): ?>
-                <?php foreach ($sdmFaskesList as $i=>$row): ?>
-                <tr>
-                    <td><?php echo $i+1; ?></td>
-                    <td><?php echo htmlspecialchars($row['nama_kecamatan']); ?></td>
-                    <td><strong><?php echo htmlspecialchars($row['nama_faskes']); ?></strong> <span style="color:rgba(255,255,255,0.4);font-size:11px;">(<?php echo htmlspecialchars($row['jenis']); ?>)</span></td>
-                    <td><?php echo htmlspecialchars($row['profesi']); ?></td>
-                    <td><?php if ($row['nama_spesialis']): ?><span class="badge-total" style="background:rgba(255,193,7,0.12);color:#ffd54f;"><?php echo htmlspecialchars($row['nama_spesialis']); ?> <?php echo $row['kode_spesialis'] ? '('.htmlspecialchars($row['kode_spesialis']).')' : ''; ?></span><?php else: ?><span style="color:rgba(255,255,255,0.35);font-size:12px;">Umum</span><?php endif; ?></td>
-                    <td><span class="badge-total"><?php echo number_format($row['jumlah']); ?></span></td>
-                    <td>
-                        <form method="POST" style="display:inline-flex;gap:6px;align-items:center;">
-                            <input type="hidden" name="edit_id" value="<?php echo $row['id']; ?>">
-                            <input type="number" name="edit_jumlah" value="<?php echo (int)$row['jumlah']; ?>" min="0" style="width:80px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.1);">
-                            <button type="submit" name="edit_sdm_faskes" class="btn-icon"><i class="fas fa-pen"></i></button>
-                        </form>
-                        <a href="?delete_faskes=<?php echo $row['id']; ?>" class="btn-icon btn-danger" onclick="return confirm('Hapus data SDM fasyankes ini?')"><i class="fas fa-trash"></i></a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                <?php else: ?>
-                <tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.4);padding:24px;">Belum ada data SDM per fasyankes. Tambahkan via form di atas.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+        <p style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35)"><i class="fas fa-info-circle"></i> Bagian lain di halaman ini (CRUD Jenis SDM legacy, Spesialis, SDMK per Kecamatan) tetap aktif karena tidak menyentuh kolom generated.</p>
     </div>
 </div>
 
-<script>
-// Cascading Kecamatan → Fasyankes (JS)
-const faskesByKec = <?php echo json_encode($faskesByKecamatan, JSON_UNESCAPED_UNICODE); ?>;
-const selKec = document.getElementById('selKecamatan');
-const selFas = document.getElementById('selFaskes');
-if (selKec && selFas) {
-    selKec.addEventListener('change', function(){
-        const kecId = this.value;
-        selFas.innerHTML = '';
-        selFas.disabled = !kecId;
-        if (!kecId) {
-            selFas.innerHTML = '<option value=\"\">-- Pilih Kecamatan dulu --</option>';
-            return;
-        }
-        const list = faskesByKec[kecId] || [];
-        if (list.length===0) {
-            selFas.innerHTML = '<option value=\"\">Tidak ada fasyankes di kecamatan ini</option>';
-            return;
-        }
-        selFas.innerHTML = '<option value=\"\">-- Pilih Fasyankes --</option>';
-        list.forEach(function(f){
-            const opt = document.createElement('option');
-            opt.value = f.id_faskes;
-            opt.textContent = f.nama_faskes + ' (' + f.jenis + ')';
-            selFas.appendChild(opt);
-        });
-    });
-}
-// Spesialis hanya untuk Dokter/Dokter Gigi
-const selProfesi = document.getElementById('selProfesi');
-const selSpesialis = document.getElementById('selSpesialis');
-const groupSpesialis = document.getElementById('groupSpesialis');
-function toggleSpesialis(){
-    if(!selProfesi || !selSpesialis) return;
-    const opt = selProfesi.options[selProfesi.selectedIndex];
-    const nama = opt ? (opt.getAttribute('data-nama')||'').toLowerCase() : '';
-    const isDokter = nama.indexOf('dokter') !== -1;
-    selSpesialis.disabled = !isDokter;
-    if(groupSpesialis) groupSpesialis.style.opacity = isDokter ? '1' : '0.4';
-    if(!isDokter) selSpesialis.value = '';
-}
-if(selProfesi) {
-    selProfesi.addEventListener('change', toggleSpesialis);
-    toggleSpesialis();
-}
-</script>
+<!-- JS cascading SDM per Fasyankes DIHAPUS — sekarang dikelola via sdmk.php -->
 
 </body>
 </html>

@@ -1,4 +1,5 @@
 <?php
+// LEGACY - pertimbangkan untuk dihapus/digabung juga ke sdmk.php di iterasi berikutnya jika CRUD jenis SDM lama & SDMK per kecamatan sudah tidak dipakai lagi.
 require_once '../config.php';
 requireLogin();
 $current_page = basename($_SERVER['PHP_SELF']);
@@ -165,7 +166,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
-        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
+        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM (legacy)</a></li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>

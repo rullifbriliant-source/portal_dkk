@@ -28,6 +28,8 @@ $chkTbl = @mysqli_query($config, "SHOW TABLES LIKE 'tbl_spesialis'");
 if ($chkTbl && mysqli_num_rows($chkTbl) > 0) $hasSpTable = true;
 
 // Resolve kecamatan
+// Helper kategori totals for frontend ringkasan (A/B/C)
+$kategoriLabels = ['Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'];
 if ($kecamatan !== '') {
     $kecEsc = mysqli_real_escape_string($config, $kecamatan);
     // support id numerik atau nama
@@ -62,17 +64,17 @@ if ($id_kecamatan !== null) {
     if ($hasFaskesData) {
         // Total per jenis dari tbl_sdm_faskes
         $sqlJenis = "
-            SELECT si.id, si.nama_item, COALESCE(SUM(sf.jumlah),0) AS nilai
+            SELECT si.id, si.nama_item, si.kategori, COALESCE(SUM(sf.jumlah),0) AS nilai
             FROM tbl_sdm_items si
             LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_kecamatan=$id_kecamatan AND sf.aktif='Y'
                 " . ($id_faskes_filter ? " AND sf.id_faskes=$id_faskes_filter " : "") . "
             WHERE si.aktif='Y'
-            GROUP BY si.id, si.nama_item, si.urutan
+            GROUP BY si.id, si.nama_item, si.kategori, si.urutan
             ORDER BY si.urutan
         ";
         $q = mysqli_query($config, $sqlJenis);
         while ($row = mysqli_fetch_assoc($q)) {
-            $items[] = ['id'=>(int)$row['id'], 'nama'=>$row['nama_item'], 'nilai'=>(int)$row['nilai']];
+            $items[] = ['id'=>(int)$row['id'], 'nama'=>$row['nama_item'], 'kategori'=>$row['kategori'], 'nilai'=>(int)$row['nilai']];
         }
 
         // Breakdown spesialis dokter (jika ada)
@@ -103,11 +105,11 @@ if ($id_kecamatan !== null) {
             if ($id_faskes_filter && $fid !== $id_faskes_filter) continue;
             // per jenis untuk faskes ini — SUM agar spesialis teragregasi ke Dokter
             $perJenis = [];
-            $sqlPJ = "SELECT si.id, si.nama_item, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y' GROUP BY si.id, si.nama_item, si.urutan ORDER BY si.urutan";
+            $sqlPJ = "SELECT si.id, si.nama_item, si.kategori, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y' GROUP BY si.id, si.nama_item, si.kategori, si.urutan ORDER BY si.urutan";
             $qPJ = mysqli_query($config, $sqlPJ);
             $totalF = 0;
             while ($pj = mysqli_fetch_assoc($qPJ)) {
-                $perJenis[] = ['id'=>(int)$pj['id'], 'nama'=>$pj['nama_item'], 'nilai'=>(int)$pj['nilai']];
+                $perJenis[] = ['id'=>(int)$pj['id'], 'nama'=>$pj['nama_item'], 'kategori'=>$pj['kategori'], 'nilai'=>(int)$pj['nilai']];
                 $totalF += (int)$pj['nilai'];
             }
             // per spesialis untuk faskes ini
@@ -129,6 +131,9 @@ if ($id_kecamatan !== null) {
             ];
         }
         $total = array_sum(array_column($items, 'nilai'));
+        // Hitung kategori totals untuk ringkas modal
+        $katTotals = ['Tenaga Kesehatan'=>0,'Asisten Tenaga Kesehatan'=>0,'Tenaga Penunjang'=>0];
+        foreach($items as $it){ $k=$it['kategori'] ?? 'Tenaga Kesehatan'; if(isset($katTotals[$k])) $katTotals[$k]+=(int)$it['nilai']; else $katTotals[$k]=(int)$it['nilai']; }
         // Hitung belum_ditentukan: selisih tbl_sdm yang id_faskes NULL? untuk info
         $belum = 0;
         $qBelum = mysqli_query($config, "SELECT COUNT(*) c FROM tbl_sdm WHERE id_kecamatan=$id_kecamatan AND id_faskes IS NULL AND aktif='Y'");
@@ -142,6 +147,7 @@ if ($id_kecamatan !== null) {
             "data"=>$items,               // legacy key untuk renderSdm lama
             "total"=>$total,
             "total_per_jenis"=>$items,
+            "kategori_totals"=>$katTotals,
             "faskes"=>$faskesList,
             "belum_ditentukan"=>$belum,
             "source"=>"tbl_sdm_faskes"
@@ -152,7 +158,7 @@ if ($id_kecamatan !== null) {
     } else {
         // Fallback ke agregat lama tbl_sdm_kecamatan (agar tidak pecah data existing)
         $sql = "
-            SELECT si.id, si.nama_item, COALESCE(sk.jumlah, 0) AS nilai
+            SELECT si.id, si.nama_item, si.kategori, COALESCE(sk.jumlah, 0) AS nilai
             FROM tbl_sdm_items si
             LEFT JOIN tbl_sdm_kecamatan sk ON sk.id_item=si.id AND sk.id_kecamatan=$id_kecamatan
             WHERE si.aktif='Y'
@@ -160,7 +166,7 @@ if ($id_kecamatan !== null) {
         ";
         $query = mysqli_query($config, $sql);
         while ($row = mysqli_fetch_assoc($query)) {
-            $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'nilai'=>(int)$row['nilai']];
+            $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'kategori'=>$row['kategori'],'nilai'=>(int)$row['nilai']];
         }
         $total = array_sum(array_column($items, 'nilai'));
         // faskes kosong karena belum ada data

@@ -1,0 +1,17 @@
+{
+    "name": "portal-dkk/portal_dkk",
+    "description": "Portal Terpadu Dinkes Sukoharjo - SDMK Puskesmas Excel",
+    "require": {
+        "php": ">=8.0",
+        "phpoffice/phpspreadsheet": "^1.29"
+    },
+    "autoload": {
+        "psr-4": {
+            "PortalDkk\\": "App/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
