@@ -2511,6 +2511,115 @@ const SdmModal = {
 };
 
 /* ==========================================================
+   PENDUDUK MODAL - Ringkasan + sebaran per kecamatan
+   Sumber: api/get_penduduk.php (tbl_kecamatan, read-only).
+   Database tidak memiliki rincian laki-laki/perempuan,
+   sehingga kolom tersebut ditampilkan sebagai tidak tersedia.
+========================================================== */
+
+const PendudukModal = {
+    init: function() {
+        const box = DOM.id("statBoxPenduduk");
+        if (box) {
+            box.addEventListener("click", function(){ PendudukModal.open(); });
+            box.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); PendudukModal.open(); } });
+        }
+        const closeBtn = DOM.id("closePenduduk");
+        if (closeBtn) closeBtn.addEventListener("click", function(){ PendudukModal.close(); });
+        const modal = DOM.id("pendudukModal");
+        if (modal) modal.addEventListener("click", function(e){ if(e.target===modal) PendudukModal.close(); });
+        document.addEventListener("keydown", function(e){ if(e.key==="Escape") PendudukModal.close(); });
+        Log.info("PendudukModal Ready");
+    },
+
+    open: function() {
+        const modal = DOM.id("pendudukModal");
+        if (!modal) return;
+        modal.classList.add("show");
+        this.showLoading();
+        this.load();
+    },
+
+    close: function() {
+        const modal = DOM.id("pendudukModal");
+        if (modal) modal.classList.remove("show");
+    },
+
+    showLoading: function() {
+        const sum = DOM.id("pendudukModalSummary"); if (sum) sum.innerHTML = "";
+        const list = DOM.id("pendudukList");
+        if (list) list.innerHTML = '<div class="faskes-empty"><i class="fas fa-spinner fa-spin"></i><p>Memuat data penduduk...</p></div>';
+    },
+
+    load: function() {
+        const self = this;
+        this.fetchJSON("api/get_penduduk.php?ts=" + Date.now())
+            .then(function(json){ self.render(json); })
+            .catch(function(){ self.renderError(); });
+    },
+
+    fetchJSON: function(url) {
+        return fetch(url).then(function(res){
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+        });
+    },
+
+    render: function(json) {
+        const sum = DOM.id("pendudukModalSummary");
+        const list = DOM.id("pendudukList");
+        if (!sum || !list) return;
+        if (!json || !json.status) {
+            this.renderError();
+            return;
+        }
+        const rows = json.data || [];
+        let html = '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL PENDUDUK</div>'
+            + '<div style="font-size:24px;font-weight:700;color:#fff;">' + Util.number(json.total || 0) + ' <span style="font-size:11px;color:rgba(255,255,255,0.5);">jiwa</span></div></div>';
+        html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">LAKI-LAKI</div>'
+            + '<div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.45);">-</div>'
+            + '<div style="font-size:10px;color:rgba(255,255,255,0.35);">belum tersedia di database</div></div>';
+        html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">PEREMPUAN</div>'
+            + '<div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.45);">-</div>'
+            + '<div style="font-size:10px;color:rgba(255,255,255,0.35);">belum tersedia di database</div></div>';
+        sum.innerHTML = html;
+
+        let body = '<table class="info-panel" style="width:100%;"><thead><tr><th style="text-align:left;">Kecamatan</th>'
+            + '<th>Laki-laki</th><th>Perempuan</th><th style="text-align:right;">Total</th></tr></thead><tbody>';
+        let max = null, min = null;
+        rows.forEach(function(r){
+            body += '<tr><td style="text-align:left;">' + this.escapeHtml(r.kecamatan) + '</td>'
+                + '<td style="color:rgba(255,255,255,0.35);">-</td><td style="color:rgba(255,255,255,0.35);">-</td>'
+                + '<td style="text-align:right;font-weight:700;color:#72e8ff;">' + Util.number(r.penduduk) + '</td></tr>';
+            if (!max || r.penduduk > max.penduduk) max = r;
+            if (!min || r.penduduk < min.penduduk) min = r;
+        }, this);
+        body += '</tbody></table>';
+        if (max && min) {
+            body += '<div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.7);">'
+                + 'Terbanyak: <b style="color:#fff;">' + this.escapeHtml(max.kecamatan) + '</b> (' + Util.number(max.penduduk) + ' jiwa)'
+                + ' &nbsp;|&nbsp; Tersedikit: <b style="color:#fff;">' + this.escapeHtml(min.kecamatan) + '</b> (' + Util.number(min.penduduk) + ' jiwa)</div>';
+        }
+        body += '<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.35);">Sumber: tbl_kecamatan (' + this.escapeHtml(json.source || '') + '). Rincian gender belum tersedia di database.</div>';
+        list.innerHTML = body;
+    },
+
+    renderError: function() {
+        const list = DOM.id("pendudukList");
+        if (list) list.innerHTML = '<div class="faskes-empty"><i class="fas fa-triangle-exclamation"></i><p>Gagal memuat data penduduk.</p></div>';
+    },
+
+    escapeHtml: function(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+};
+
+/* ==========================================================
    BAGIAN 8 - STARTUP ENGINE
 ========================================================= */
 
@@ -2537,6 +2646,7 @@ const Startup = {
         PortalAPI.loadFasyankes();
         FasyankesModal.init();
         SdmModal.init();
+        PendudukModal.init();
 
         Log.info("%cPORTAL TERPADU DKK SUKOHARJO", "color:#00d4ff;font-size:16px;font-weight:bold");
         Log.info("Version : " + Portal.version);

@@ -146,6 +146,136 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: fasyankes.php?msg=deleted");
         exit;
     }
+
+    // IMPORT EXCEL FASKES (upsert by nama_faskes + id_kecamatan)
+    if ($action === 'import_excel') {
+        $autoload = __DIR__ . '/../../vendor/autoload.php';
+        if (!file_exists($autoload)) {
+            header("Location: fasyankes.php?msg=excel_no_vendor");
+            exit;
+        }
+        require_once $autoload;
+        if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
+            header("Location: fasyankes.php?msg=import_no_file");
+            exit;
+        }
+        $ext = strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['xlsx', 'xls', 'csv'], true)) {
+            header("Location: fasyankes.php?msg=import_invalid");
+            exit;
+        }
+        $allowedJenis = ['Puskesmas', 'Pustu', 'Klinik', 'Rumah Sakit', 'Poskesdes', 'Apotek', 'Laboratorium'];
+        $kecMap = [];
+        $qK = mysqli_query($config, "SELECT id_kecamatan, nama_kecamatan FROM tbl_kecamatan WHERE aktif='Y'");
+        while ($rk = mysqli_fetch_assoc($qK)) {
+            $kecMap[strtolower(trim($rk['nama_kecamatan']))] = (int)$rk['id_kecamatan'];
+        }
+        $added = 0; $updated = 0; $skipped = 0;
+        try {
+            $reader = $ext === 'csv'
+                ? new \PhpOffice\PhpSpreadsheet\Reader\Csv()
+                : ($ext === 'xls'
+                    ? new \PhpOffice\PhpSpreadsheet\Reader\Xls()
+                    : new \PhpOffice\PhpSpreadsheet\Reader\Xlsx());
+            $reader->setReadDataOnly(true);
+            $ss = $reader->load($_FILES['excel_file']['tmp_name']);
+            $rows = $ss->getActiveSheet()->toArray(null, true, true, true);
+            // Deteksi baris header: kolom B berisi "Nama Faskes"
+            $headerRow = null;
+            foreach ($rows as $rNum => $row) {
+                if (strcasecmp(trim((string)($row['B'] ?? '')), 'Nama Faskes') === 0) { $headerRow = (int)$rNum; break; }
+            }
+            if ($headerRow === null) {
+                header("Location: fasyankes.php?msg=import_invalid");
+                exit;
+            }
+            $config->begin_transaction();
+            foreach ($rows as $rNum => $row) {
+                if ((int)$rNum <= $headerRow) continue;
+                $nama = trim((string)($row['B'] ?? ''));
+                if ($nama === '') continue;
+                $jenis = trim((string)($row['C'] ?? ''));
+                $kecName = strtolower(trim((string)($row['D'] ?? '')));
+                if (!in_array($jenis, $allowedJenis, true) || !isset($kecMap[$kecName])) { $skipped++; continue; }
+                $idKec = $kecMap[$kecName];
+                $namaEsc = mysqli_real_escape_string($config, $nama);
+                $jenisEsc = mysqli_real_escape_string($config, $jenis);
+                $slugEsc = mysqli_real_escape_string($config, $kecName);
+                $alamatEsc = mysqli_real_escape_string($config, trim((string)($row['E'] ?? '')));
+                $telpEsc = mysqli_real_escape_string($config, trim((string)($row['F'] ?? '')));
+                $emailEsc = mysqli_real_escape_string($config, trim((string)($row['G'] ?? '')));
+                $chk = mysqli_query($config, "SELECT id_faskes FROM tbl_faskes WHERE nama_faskes='$namaEsc' AND id_kecamatan=$idKec LIMIT 1");
+                if ($ex = mysqli_fetch_assoc($chk)) {
+                    $eid = (int)$ex['id_faskes'];
+                    $ok = mysqli_query($config, "UPDATE tbl_faskes SET nama_faskes='$namaEsc', jenis='$jenisEsc', id_kecamatan=$idKec, kecamatan='$slugEsc', alamat='$alamatEsc', telepon='$telpEsc', email='$emailEsc', aktif='Y' WHERE id_faskes=$eid");
+                    if ($ok) $updated++; else $skipped++;
+                } else {
+                    $ok = mysqli_query($config, "INSERT INTO tbl_faskes (kode_faskes, nama_faskes, jenis, id_kecamatan, kecamatan, alamat, telepon, email, foto, aktif) VALUES (NULL, '$namaEsc', '$jenisEsc', $idKec, '$slugEsc', '$alamatEsc', '$telpEsc', '$emailEsc', NULL, 'Y')");
+                    if ($ok) $added++; else $skipped++;
+                }
+            }
+            $config->commit();
+        } catch (Exception $e) {
+            $config->rollback();
+            header("Location: fasyankes.php?msg=import_error");
+            exit;
+        }
+        header("Location: fasyankes.php?msg=import_done&added=$added&updated=$updated&skipped=$skipped");
+        exit;
+    }
+}
+
+// ==========================================
+// EXCEL TEMPLATE / EXPORT (download, read-only)
+// ==========================================
+$excelDl = $_GET['excel'] ?? '';
+if (in_array($excelDl, ['template', 'export'], true)) {
+    $autoload = __DIR__ . '/../../vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        header("Location: fasyankes.php?msg=excel_no_vendor");
+        exit;
+    }
+    require_once $autoload;
+    $headers = ['Kode', 'Nama Faskes', 'Jenis', 'Kecamatan', 'Alamat', 'Telepon', 'Email'];
+    $ss = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $ss->getActiveSheet();
+    $sheet->setTitle('Fasyankes');
+    foreach ($headers as $i => $h) {
+        $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
+    }
+    $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:G1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('BDD7EE');
+    $sheet->getColumnDimension('A')->setWidth(16);
+    $sheet->getColumnDimension('B')->setWidth(42);
+    $sheet->getColumnDimension('C')->setWidth(16);
+    $sheet->getColumnDimension('D')->setWidth(18);
+    $sheet->getColumnDimension('E')->setWidth(40);
+    $sheet->getColumnDimension('F')->setWidth(18);
+    $sheet->getColumnDimension('G')->setWidth(28);
+    $sheet->freezePane('A2');
+    $rowIdx = 2;
+    if ($excelDl === 'export') {
+        $qExp = mysqli_query($config, "SELECT f.kode_faskes, f.nama_faskes, f.jenis, k.nama_kecamatan, f.alamat, f.telepon, f.email FROM tbl_faskes f LEFT JOIN tbl_kecamatan k ON k.id_kecamatan=f.id_kecamatan WHERE f.aktif='Y' ORDER BY k.nama_kecamatan, f.jenis, f.nama_faskes");
+        while ($r = mysqli_fetch_assoc($qExp)) {
+            $sheet->setCellValueByColumnAndRow(1, $rowIdx, $r['kode_faskes']);
+            $sheet->setCellValueByColumnAndRow(2, $rowIdx, $r['nama_faskes']);
+            $sheet->setCellValueByColumnAndRow(3, $rowIdx, $r['jenis']);
+            $sheet->setCellValueByColumnAndRow(4, $rowIdx, $r['nama_kecamatan']);
+            $sheet->setCellValueByColumnAndRow(5, $rowIdx, $r['alamat']);
+            $sheet->setCellValueByColumnAndRow(6, $rowIdx, $r['telepon']);
+            $sheet->setCellValueByColumnAndRow(7, $rowIdx, $r['email']);
+            $rowIdx++;
+        }
+        $filename = 'Export_Fasyankes_' . date('Ymd') . '.xlsx';
+    } else {
+        $filename = 'Template_Fasyankes.xlsx';
+    }
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($ss);
+    $writer->save('php://output');
+    exit;
 }
 
 // ==========================================
@@ -256,6 +386,13 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         .btn-primary { padding:10px 24px; border-radius:10px; border:none; background:linear-gradient(135deg,#00d4ff,#0088cc); color:#fff; font-weight:600; cursor:pointer; transition:0.3s; display:inline-flex; align-items:center; gap:8px; font-size:14px; }
         .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(0,212,255,0.25); }
 
+        /* FORM ACTION GROUP (Simpan + Excel, satu kelompok) */
+        .form-actions { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:20px; }
+        .form-actions a { text-decoration:none; }
+        .btn-excel-import { background:linear-gradient(135deg,#FF9800,#EF6C00); }
+        .btn-excel-export { background:linear-gradient(135deg,#4CAF50,#2E7D32); }
+        .btn-excel-template { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); }
+
         /* FILTERS & SEARCH */
         .toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
         .filters-wrap { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
@@ -339,6 +476,12 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <div class="alert alert-success"><i class="fas fa-check-circle"></i> Fasilitas kesehatan berhasil dihapus!</div>
     <?php elseif ($msg === 'kecamatan_required'): ?>
         <div class="alert" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.25);color:#ffd54f;"><i class="fas fa-exclamation-triangle"></i> Kecamatan wajib dipilih untuk setiap fasilitas kesehatan.</div>
+    <?php elseif ($msg === 'import_done'): ?>
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i> Import Excel selesai: <?= (int)($_GET['added'] ?? 0) ?> ditambah, <?= (int)($_GET['updated'] ?? 0) ?> diperbarui, <?= (int)($_GET['skipped'] ?? 0) ?> dilewati.</div>
+    <?php elseif (in_array($msg, ['import_no_file', 'import_invalid', 'import_error'], true)): ?>
+        <div class="alert" style="background:rgba(255,82,82,0.12);border:1px solid rgba(255,82,82,0.2);color:#ff8a80;"><i class="fas fa-exclamation-circle"></i> Import Excel gagal. Pastikan file .xlsx/.xls/.csv sesuai Template (header kolom B = "Nama Faskes").</div>
+    <?php elseif ($msg === 'excel_no_vendor'): ?>
+        <div class="alert" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.25);color:#ffd54f;"><i class="fas fa-exclamation-triangle"></i> Library Excel (PhpSpreadsheet) belum terinstal. Jalankan <code>composer install</code> terlebih dahulu.</div>
     <?php endif; ?>
 
     <!-- STATS OVERVIEW -->
@@ -428,8 +571,11 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                     <input type="file" name="foto" accept="image/jpeg,image/png,image/webp">
                 </div>
             </div>
-            <div style="margin-top:20px;">
+            <div class="form-actions">
                 <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Fasilitas</button>
+                <button type="button" class="btn-primary btn-excel-import" onclick="document.getElementById('importModal').style.display='flex'"><i class="fas fa-file-import"></i> Import Excel</button>
+                <a href="fasyankes.php?excel=export" class="btn-primary btn-excel-export"><i class="fas fa-file-export"></i> Export Excel</a>
+                <a href="fasyankes.php?excel=template" class="btn-primary btn-excel-template"><i class="fas fa-file-excel"></i> Template Excel</a>
             </div>
         </form>
     </div>
@@ -547,6 +693,29 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     </div>
 </div>
 
+<!-- MODAL IMPORT EXCEL -->
+<div id="importModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:999;justify-content:center;align-items:center;">
+    <div class="modal-box" style="max-width:520px;">
+        <h2><i class="fas fa-file-import" style="color:#00d4ff;"></i> Import Excel Fasyankes</h2>
+        <p style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:16px;line-height:1.7;">
+            Format kolom: <strong>Kode | Nama Faskes | Jenis | Kecamatan | Alamat | Telepon | Email</strong> (baris 1 = header).
+            Baris dicocokkan by <strong>Nama + Kecamatan</strong>: cocok → diperbarui, baru → ditambah.
+            Unduh <a href="fasyankes.php?excel=template" style="color:#00d4ff;">Template Excel</a> terlebih dahulu.
+        </p>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="import_excel">
+            <div class="form-group">
+                <label>File Excel (.xlsx / .xls / .csv, maks. 5MB)</label>
+                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary"><i class="fas fa-upload"></i> Upload &amp; Import</button>
+                <button type="button" class="btn-secondary" onclick="document.getElementById('importModal').style.display='none'">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- MODAL EDIT FASKES -->
 <div id="editModal">
     <div class="modal-box">
@@ -639,6 +808,10 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
 });
 
 document.getElementById('editModal').onclick = function(e) {
+    if (e.target === this) this.style.display = 'none';
+};
+
+document.getElementById('importModal').onclick = function(e) {
     if (e.target === this) this.style.display = 'none';
 };
 </script>

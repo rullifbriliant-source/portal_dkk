@@ -294,24 +294,12 @@
 
             </div>
 
-            <div class="stats-row">
+            <div class="stats-row" style="grid-template-columns:repeat(2,1fr);">
 
-                <div class="stat-box">
+                <div class="stat-box" id="statBoxPenduduk" role="button" tabindex="0" title="Lihat detail penduduk" style="cursor:pointer;">
                     <i class="fas fa-users"></i>
                     <h4 id="statPenduduk">0</h4>
                     <p>Penduduk</p>
-                </div>
-
-                <div class="stat-box">
-                    <i class="fas fa-hospital"></i>
-                    <h4 id="statPuskesmas2">0</h4>
-                    <p>Puskesmas</p>
-                </div>
-
-                <div class="stat-box">
-                    <i class="fas fa-house-medical"></i>
-                    <h4 id="statPustu2">0</h4>
-                    <p>Pustu</p>
                 </div>
 
                 <div class="stat-box">
@@ -741,6 +729,29 @@ id="footerBar">
                 <div class="faskes-filters" id="sdmFilters"></div>
                 <div class="faskes-list" id="sdmList">
                     <div class="faskes-empty"><i class="fas fa-users"></i><p>Pilih kecamatan pada peta terlebih dahulu.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =======================================================
+    MODAL DATA PENDUDUK
+    ======================================================= -->
+
+    <div class="apps-modal" id="pendudukModal">
+        <div class="apps-window faskes-window" style="max-width:640px;">
+            <div class="apps-header">
+                <h3>
+                    <i class="fas fa-users" style="color:#00d4ff;margin-right:10px;"></i>
+                    <span>Data Penduduk</span>
+                </h3>
+                <button id="closePenduduk" class="faskes-close">&times;</button>
+            </div>
+            <div class="faskes-body">
+                <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:12px;">Statistik Penduduk Kabupaten Sukoharjo</p>
+                <div id="pendudukModalSummary" style="padding:12px 16px;margin-bottom:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:12px;display:flex;gap:16px;flex-wrap:wrap;"></div>
+                <div class="faskes-list" id="pendudukList">
+                    <div class="faskes-empty"><i class="fas fa-spinner fa-spin"></i><p>Memuat data penduduk...</p></div>
                 </div>
             </div>
         </div>
