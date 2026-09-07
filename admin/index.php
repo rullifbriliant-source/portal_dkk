@@ -60,7 +60,7 @@ if (empty($itemsPenyakit)) {
     $penyakitCount = count($itemsPenyakit);
 }
 
-// Ambil data SDM
+// Ambil data SDM (ringkas per kategori untuk dashboard, bukan list 27)
 $itemsSdm = [];
 $checkTableSdm = mysqli_query($config, "SHOW TABLES LIKE 'tbl_sdm_items'");
 if (mysqli_num_rows($checkTableSdm) > 0) {
@@ -78,6 +78,23 @@ if (empty($itemsSdm)) {
         ['nama_item' => 'Nakes Lainnya', 'nilai' => 145]
     ];
     $sdmCount = count($itemsSdm);
+}
+// Ringkasan SDMK per kategori (untuk card dashboard yang dirapikan)
+$sdmKategori = ['Tenaga Kesehatan'=>0,'Asisten Tenaga Kesehatan'=>0,'Tenaga Penunjang'=>0];
+$sdmGrand = 0;
+$qKat = $config->query("SELECT si.kategori, COALESCE(SUM(f.jumlah),0) as total FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes f ON f.id_profesi=si.id AND f.aktif='Y' WHERE si.aktif='Y' GROUP BY si.kategori");
+if($qKat){
+    while($r=$qKat->fetch_assoc()){
+        $sdmKategori[$r['kategori']] = (int)$r['total'];
+        $sdmGrand += (int)$r['total'];
+    }
+}
+$sdmPerJenisFaskes = [];
+$qJF = $config->query("SELECT f.jenis, COALESCE(SUM(sf.jumlah),0) as total FROM tbl_faskes f LEFT JOIN tbl_sdm_faskes sf ON sf.id_faskes=f.id_faskes AND sf.aktif='Y' WHERE f.aktif='Y' GROUP BY f.jenis ORDER BY FIELD(f.jenis,'Puskesmas','Pustu','Rumah Sakit','Klinik','Poskesdes','Apotek','Laboratorium')");
+if($qJF){
+    while($r=$qJF->fetch_assoc()){
+        $sdmPerJenisFaskes[$r['jenis']] = (int)$r['total'];
+    }
 }
 
 // Ambil data portal info
@@ -240,27 +257,56 @@ if (mysqli_num_rows($checkPortal) > 0) {
                 <a href="crud/fasyankes.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Fasyankes</a>
             </div>
 
-            <!-- 2. SDM -->
-            <div class="card-editor">
+            <!-- 2. SDM — DIRAPIKAN: ringkas per kategori, tombol langsung terlihat tanpa scroll -->
+            <div class="card-editor" style="background:linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,136,204,0.08));border:1px solid rgba(0,212,255,0.25);box-shadow:0 8px 32px rgba(0,212,255,0.12)">
                 <div class="card-title">
                     <div class="card-title-left">
                         <i class="fas fa-users"></i>
                         <div>
                             <h3>SDM Kesehatan</h3>
-                            <p>Data sumber daya manusia</p>
+                            <p>Ringkasan per kategori (SDMK Fasyankes)</p>
                         </div>
                     </div>
-                    <span class="badge"><?= $sdmCount ?> item</span>
+                    <span class="badge"><?= $sdmCount ?> jenis</span>
                 </div>
-                <table>
-                    <?php foreach ($itemsSdm as $item): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($item['nama_item']) ?></td>
-                        <td><?= number_format((int)$item['nilai']) ?></td>
-                    </tr>
+                <!-- Satu tombol aksi ke halaman terpadu -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+                    <a href="crud/sdmk.php" class="btn-edit" style="flex:1;min-width:200px;background:linear-gradient(135deg,#00d4ff,#0088cc);color:#fff;border-color:rgba(0,212,255,0.3)"><i class="fas fa-hospital-user"></i> Kelola SDMK →</a>
+                </div>
+                <!-- Mini stat 4 angka, bukan list 27 -->
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px">
+                    <div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px;text-align:center">
+                        <div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px">Tenaga Kesehatan</div>
+                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Tenaga Kesehatan']) ?></div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (A)</div>
+                    </div>
+                    <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.15);border-radius:14px;padding:14px;text-align:center">
+                        <div style="font-size:11px;color:#ffd54f;letter-spacing:0.5px">Asisten Nakes</div>
+                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Asisten Tenaga Kesehatan']) ?></div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (B)</div>
+                    </div>
+                    <div style="background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.15);border-radius:14px;padding:14px;text-align:center">
+                        <div style="font-size:11px;color:#81c784;letter-spacing:0.5px">Tenaga Penunjang</div>
+                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Tenaga Penunjang']) ?></div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (C)</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg, rgba(68,114,196,0.25), rgba(0,212,255,0.15));border:1px solid rgba(68,114,196,0.3);border-radius:14px;padding:14px;text-align:center">
+                        <div style="font-size:11px;color:#84e7ff;letter-spacing:0.5px">Grand Total</div>
+                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmGrand) ?></div>
+                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (A+B+C)</div>
+                    </div>
+                </div>
+                <?php if(!empty($sdmPerJenisFaskes)): ?>
+                <div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;display:flex;gap:8px;flex-wrap:wrap">
+                    <?php foreach($sdmPerJenisFaskes as $j=>$tot): ?>
+                    <span style="font-size:11px;color:rgba(255,255,255,0.6);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.12);padding:4px 8px;border-radius:20px"><?= htmlspecialchars($j) ?>: <b style="color:#fff"><?= number_format($tot) ?></b></span>
                     <?php endforeach; ?>
-                </table>
-                <a href="crud/sdm.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola SDM</a>
+                </div>
+                <?php endif; ?>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <a href="crud/sdmk.php?tab=items" style="font-size:12px;color:#72e8ff;text-decoration:none"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Lihat rincian per jenis SDM →</a>
+                    <a href="crud/sdm.php" style="font-size:11px;color:rgba(255,255,255,0.3);text-decoration:none">SDM legacy</a>
+                </div>
             </div>
 
             <!-- 3. PENYAKIT -->
