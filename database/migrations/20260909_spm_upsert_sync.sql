@@ -1,0 +1,45 @@
+-- =============================================================
+-- SPM UPSERT/SYNC — migration 2026-09-09 (SUDAH DITERAPKAN)
+-- =============================================================
+-- Latar: import lama mencocokkan string eksak tanpa tahun/sasaran/sub_no,
+-- mengabaikan baris soft-delete, dan salah membaca kolom "Sub No" sebagai
+-- indikator -> duplikat + target salah relasi (542 baris artefak).
+--
+-- Yang SUDAH dikerjakan di database portal_dkk (2026-09-09):
+--  1. Backup: tbl_spm_backup_20260909, tbl_spm_target_backup_20260909
+--  2. Merge 1 grup duplikat eksak (ids 2148+2152 -> 2148, target donor 2152)
+--  3. Hapus 506 baris artefak (indikator numerik "1","2",...) + 36 parent
+--     shadow (satuan kosong duplikat induk) beserta targetnya
+--  4. Tambah kolom bkey CHAR(32), backfill via PHP (md5 business key),
+--     tambah UNIQUE KEY uq_spm_bkey
+--
+-- Business key (dihitung di App/Services/SpmLib.php):
+--   md5(periode | tahun | layanan | sub_no | indikator | satuan | sasaran)
+--   tiap komponen dinormalisasi: trim + collapse whitespace + lowercase.
+--   Normalisasi HANYA untuk pencocokan; nilai asli tetap disimpan utuh.
+--
+-- Untuk instalasi BARU (tabel masih kosong), cukup:
+-- -------------------------------------------------------------
+-- ALTER TABLE tbl_spm ADD COLUMN bkey CHAR(32) NULL AFTER sasaran,
+--   ADD KEY idx_spm_bkey (bkey);
+-- -- backfill (setara SpmLib::bkey):
+-- UPDATE tbl_spm SET bkey = MD5(CONCAT(
+--   REGEXP_REPLACE(LOWER(TRIM(periode)), '[[:space:]]+', ' '), CHAR(31),
+--   CAST(tahun AS CHAR), CHAR(31),
+--   REGEXP_REPLACE(LOWER(TRIM(jenis_layanan)), '[[:space:]]+', ' '), CHAR(31),
+--   REGEXP_REPLACE(LOWER(TRIM(COALESCE(sub_no, ''))), '[[:space:]]+', ' '), CHAR(31),
+--   REGEXP_REPLACE(LOWER(TRIM(indikator)), '[[:space:]]+', ' '), CHAR(31),
+--   REGEXP_REPLACE(LOWER(TRIM(COALESCE(satuan, ''))), '[[:space:]]+', ' '), CHAR(31),
+--   REGEXP_REPLACE(LOWER(TRIM(COALESCE(sasaran, ''))), '[[:space:]]+', ' ')
+-- ));
+-- -- verifikasi tidak ada duplikat SEBELUM pasang unique:
+-- -- SELECT bkey, COUNT(*), GROUP_CONCAT(id) FROM tbl_spm GROUP BY bkey HAVING COUNT(*) > 1;
+-- ALTER TABLE tbl_spm ADD CONSTRAINT uq_spm_bkey UNIQUE (bkey);
+-- -------------------------------------------------------------
+-- Constraint pendukung lain SUDAH ADA dan tetap dipakai:
+--   tbl_spm_target: UNIQUE uq_spm_kecamatan (id_spm, id_kecamatan)
+--   tbl_spm_sasaran: UNIQUE uq_spm_sasaran_nama (nama)
+--   tbl_spm_target.id_kecamatan -> tbl_kecamatan (RESTRICT: kecamatan tak
+--     boleh dibuat baru oleh import; mapping hanya ke kecamatan existing)
+-- =============================================================
+SELECT 'migration-doc-only' AS note;

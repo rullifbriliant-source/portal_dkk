@@ -104,6 +104,20 @@ if (mysqli_num_rows($checkPortal) > 0) {
     $qPortal = mysqli_query($config, "SELECT deskripsi FROM tbl_portal_info WHERE id = 1");
     $dataPortal = mysqli_fetch_assoc($qPortal) ?? [];
 }
+
+// Ringkasan SPM
+$spmCounts = [];
+$spmTotal = 0;
+$checkSpm = mysqli_query($config, "SHOW TABLES LIKE 'tbl_spm'");
+if (mysqli_num_rows($checkSpm) > 0) {
+    $qSpm = mysqli_query($config, "SELECT periode, COUNT(*) c FROM tbl_spm WHERE aktif='Y' GROUP BY periode");
+    if ($qSpm) {
+        while ($r = mysqli_fetch_assoc($qSpm)) {
+            $spmCounts[$r['periode']] = (int)$r['c'];
+            $spmTotal += (int)$r['c'];
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -416,6 +430,33 @@ if (mysqli_num_rows($checkPortal) > 0) {
                     <?php endif; ?>
                 </table>
                 <a href="crud/kecamatan.php" class="btn-edit"><i class="fas fa-external-link-alt"></i> Kelola Lengkap</a>
+            </div>
+
+            <!-- SPM -->
+            <div class="card-editor" style="background:linear-gradient(135deg, rgba(3,169,244,0.14), rgba(0,212,255,0.06));border:1px solid rgba(3,169,244,0.3);">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-chart-pie"></i>
+                        <div>
+                            <h3>SPM</h3>
+                            <p>Standar Pelayanan Minimal</p>
+                        </div>
+                    </div>
+                    <span class="badge"><?= $spmTotal ?> baris</span>
+                </div>
+                <table>
+                    <?php if (!empty($spmCounts)): ?>
+                        <?php foreach ($spmCounts as $per => $c): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($per) ?></td>
+                            <td><?= number_format($c) ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data SPM</td></tr>
+                    <?php endif; ?>
+                </table>
+                <a href="crud/spm.php" class="btn-edit"><i class="fas fa-external-link-alt"></i> Kelola SPM</a>
             </div>
 
             <!-- 6. INFORMASI PORTAL -->

@@ -28,6 +28,9 @@
     <link rel="stylesheet"
     href="assets/css/style_v2.css">
 
+    <link rel="stylesheet"
+    href="assets/css/spm.css">
+
     <link rel="preload"
     href="assets/img/background.jpg"
     as="image">
@@ -302,10 +305,10 @@
                     <p>Penduduk</p>
                 </div>
 
-                <div class="stat-box">
-                    <i class="fas fa-chart-line"></i>
+                <div class="stat-box" id="statBoxSpm" role="button" tabindex="0" title="Lihat data Standar Pelayanan Minimal (SPM)">
+                    <i class="fas fa-chart-pie"></i>
                     <h4 id="statProgram">0</h4>
-                    <p>Program</p>
+                    <p>SPM</p>
                 </div>
 
             </div>
@@ -633,7 +636,7 @@ id="footerBar">
 
                     </a>
 
-                    <a href="#">
+                    <a href="#" data-spm-open title="Lihat data Standar Pelayanan Minimal">
 
                         📈 SPM
 
@@ -758,6 +761,52 @@ id="footerBar">
     </div>
 
     <!-- =======================================================
+    MODAL SPM (STANDAR PELAYANAN MINIMAL) — PUBLIC READ-ONLY
+    ======================================================= -->
+
+    <div
+        class="apps-modal"
+        id="spmModal">
+
+        <div class="spm-window" role="dialog" aria-modal="true" aria-label="Standar Pelayanan Minimal">
+
+            <div class="spm-header">
+
+                <h3>
+                    <i class="fas fa-chart-pie"></i>
+                    Standar Pelayanan Minimal (SPM)
+                    <small>Versi digital rekapitulasi target SPM — Dinas Kesehatan Kab. Sukoharjo</small>
+                </h3>
+
+                <button
+                    id="closeSpm"
+                    class="spm-close"
+                    aria-label="Tutup">
+
+                    &times;
+
+                </button>
+
+            </div>
+
+            <div class="spm-tabs" id="spmTabs"></div>
+
+            <div class="spm-body" id="spmBody">
+                <div class="spm-loading">
+                    <i class="fas fa-spinner fa-spin"></i>Memuat data SPM...
+                </div>
+            </div>
+
+            <div class="spm-footer">
+                <span id="spmFootNote">Sumber: Database portal_dkk</span>
+                <span>TOTAL = jumlah 12 kecamatan, kecuali baris dengan total manual sesuai spreadsheet.</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =======================================================
     MOUSE GLOW
     ======================================================= -->
 
@@ -779,6 +828,7 @@ id="footerBar">
 <script src="assets/js/network.js"></script>
 <script src="assets/js/map.js"></script>
 <script src="assets/js/app_v2.js"></script>
+<script src="assets/js/spm.js"></script>
 <script src="assets/js/responsive.js"></script>
 <script src="assets/js/map-cursor-follow.js"></script>
 
