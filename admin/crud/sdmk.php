@@ -16,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 function getItems($config) {
     $items=[];
-    $q=$config->query("SELECT id, nama_item, kategori, id_parent, urutan FROM tbl_sdm_items WHERE aktif='Y' ORDER BY FIELD(kategori,'Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'), urutan");
+    $q=$config->query("SELECT id, nama_item, kategori, parent_id, id_parent, urutan, is_total_row, include_in_total FROM tbl_sdm_items WHERE aktif='Y' ORDER BY FIELD(kategori,'Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'), urutan");
     while($r=$q->fetch_assoc()) $items[]=$r;
     return $items;
 }
@@ -38,17 +38,10 @@ function labelJenisFaskes($jenis){
     ];
     return $map[$jenis] ?? strtoupper($jenis);
 }
-function buildParentIds($items){
-    $ids=[];
-    foreach($items as $it){ if($it['id_parent']) $ids[$it['id_parent']]=true; }
-    return $ids;
-}
 function normalizeNama($s){
     $s = trim((string)$s);
-    // collapse multiple spaces to single
     $s = preg_replace('/\s+/', ' ', $s);
     $s = strtolower($s);
-    // remove leading bullets / numbering: "a.", "b.", "-", "•", "1.", "1)", "01."
     $s = preg_replace('/^[\-\•\*\s]+/', '', $s);
     $s = preg_replace('/^[a-z]\.\s*/', '', $s);
     $s = preg_replace('/^\d+[\.\)]\s*/', '', $s);
@@ -56,7 +49,35 @@ function normalizeNama($s){
     $s = preg_replace('/\s+/', ' ', $s);
     return $s;
 }
-
+function computeTotals($config, $id_faskes){
+    // Total A = SUM where kategori='Tenaga Kesehatan' AND include_in_total=1, Total B/C accordingly per spec
+    $totals = ['A'=>0,'B'=>0,'C'=>0,'grand'=>0];
+    // Fetch items to know include_in_total per id
+    $items = getItems($config);
+    $includeMap = [];
+    foreach($items as $it){ $includeMap[$it['id']] = (int)$it['include_in_total']; }
+    // Fetch aggregated per profesi
+    $stmt = $config->prepare("SELECT id_profesi, SUM(jumlah) as tot FROM tbl_sdm_faskes WHERE id_faskes=? AND aktif='Y' GROUP BY id_profesi");
+    $stmt->bind_param("i", $id_faskes);
+    $stmt->execute();
+    $res=$stmt->get_result();
+    $perProf=[];
+    while($row=$res->fetch_assoc()) $perProf[$row['id_profesi']]=(int)$row['tot'];
+    foreach($items as $it){
+        $pid=$it['id'];
+        $val=$perProf[$pid] ?? 0;
+        if($it['kategori']==='Tenaga Kesehatan'){
+            if((int)$it['include_in_total']===1) $totals['A'] += $val;
+        } elseif($it['kategori']==='Asisten Tenaga Kesehatan'){
+            // per spec Total B = SUM semua baris asisten (but currently all include=1, so same)
+            $totals['B'] += $val;
+        } elseif($it['kategori']==='Tenaga Penunjang'){
+            $totals['C'] += $val;
+        }
+    }
+    $totals['grand'] = $totals['A'] + $totals['B'] + $totals['C'];
+    return $totals;
+}
 
 // ---------- HANDLE POST MASTER ITEMS ----------
 if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add_item','edit_item','delete_item'])){
@@ -69,27 +90,28 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add
         $id_parent = !empty($_POST['id_parent']) ? (int)$_POST['id_parent'] : null;
         $urutan = (int)($_POST['urutan'] ?? 0);
         if ($nama !== '') {
-            $stmt = $config->prepare("SELECT id FROM tbl_sdm_items WHERE nama_item=? LIMIT 1");
-            $stmt->bind_param("s", $nama);
+            // UNIQUE is now (nama_item,kategori)
+            $stmt = $config->prepare("SELECT id FROM tbl_sdm_items WHERE nama_item=? AND kategori=? LIMIT 1");
+            $stmt->bind_param("ss", $nama, $kategori);
             $stmt->execute();
             $stmt->store_result();
             if ($stmt->num_rows === 0) {
-                if ($id_parent === null) {
-                    $stmt2 = $config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, id_parent, urutan, aktif) VALUES (?, ?, NULL, ?, 'Y')");
-                    $stmt2->bind_param("ssi", $nama, $kategori, $urutan);
-                } else {
+                // validate parent
+                if ($id_parent !== null) {
                     $chk = $config->prepare("SELECT id FROM tbl_sdm_items WHERE id=? AND aktif='Y' LIMIT 1");
                     $chk->bind_param("i", $id_parent);
                     $chk->execute();
                     $chk->store_result();
                     if ($chk->num_rows===0) $id_parent = null;
-                    if($id_parent===null){
-                        $stmt2 = $config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, id_parent, urutan, aktif) VALUES (?, ?, NULL, ?, 'Y')");
-                        $stmt2->bind_param("ssi", $nama, $kategori, $urutan);
-                    } else {
-                        $stmt2 = $config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, id_parent, urutan, aktif) VALUES (?, ?, ?, ?, 'Y')");
-                        $stmt2->bind_param("ssii", $nama, $kategori, $id_parent, $urutan);
-                    }
+                }
+                $is_total = 0;
+                $include = $id_parent === null ? 1 : 0;
+                if ($id_parent === null) {
+                    $stmt2 = $config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, parent_id, id_parent, urutan, is_total_row, include_in_total, aktif) VALUES (?, ?, NULL, NULL, ?, ?, ?, 'Y')");
+                    $stmt2->bind_param("ssiii", $nama, $kategori, $urutan, $is_total, $include);
+                } else {
+                    $stmt2 = $config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, parent_id, id_parent, urutan, is_total_row, include_in_total, aktif) VALUES (?, ?, ?, ?, ?, ?, ?, 'Y')");
+                    $stmt2->bind_param("ssiiiii", $nama, $kategori, $id_parent, $id_parent, $urutan, $is_total, $include);
                 }
                 $ok=$stmt2->execute();
                 if(!$ok){ header("Location: sdmk.php?tab=items&msg=error"); exit; }
@@ -117,12 +139,19 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add
                 $chk->store_result();
                 if ($chk->num_rows===0) $id_parent = null;
             }
+            $include = $id_parent === null ? 1 : 0;
+            // check duplicate (nama,kategori) except self
+            $dup=$config->prepare("SELECT id FROM tbl_sdm_items WHERE nama_item=? AND kategori=? AND id<>? LIMIT 1");
+            $dup->bind_param("ssi", $nama, $kategori, $id);
+            $dup->execute();
+            $dup->store_result();
+            if($dup->num_rows>0){ header("Location: sdmk.php?tab=items&msg=exists"); exit; }
             if ($id_parent === null) {
-                $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, id_parent=NULL, urutan=?, aktif=? WHERE id=?");
-                $stmt->bind_param("ssisi", $nama, $kategori, $urutan, $aktif, $id);
+                $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, parent_id=NULL, id_parent=NULL, urutan=?, include_in_total=?, aktif=? WHERE id=?");
+                $stmt->bind_param("ssisii", $nama, $kategori, $urutan, $include, $aktif, $id);
             } else {
-                $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, id_parent=?, urutan=?, aktif=? WHERE id=?");
-                $stmt->bind_param("ssiisi", $nama, $kategori, $id_parent, $urutan, $aktif, $id);
+                $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, parent_id=?, id_parent=?, urutan=?, include_in_total=?, aktif=? WHERE id=?");
+                $stmt->bind_param("ssiisiii", $nama, $kategori, $id_parent, $id_parent, $urutan, $include, $aktif, $id);
             }
             $stmt->execute();
             header("Location: sdmk.php?tab=items&msg=updated"); exit;
@@ -152,7 +181,6 @@ if (in_array($action, ['template','export'])) {
     $faskes=$stmt->get_result()->fetch_assoc();
     if(!$faskes){ die("Fasyankes tidak ditemukan"); }
     $items=getItems($config);
-    $parentIds=buildParentIds($items);
     $dataMap=[];
     if($action==='export'){
         $stmt2=$config->prepare("SELECT id_profesi, SUM(asn_l) as asn_l, SUM(asn_p) as asn_p, SUM(nonasn_l) as nonasn_l, SUM(nonasn_p) as nonasn_p, SUM(jumlah) as jumlah FROM tbl_sdm_faskes WHERE id_faskes=? AND aktif='Y' GROUP BY id_profesi");
@@ -206,7 +234,6 @@ if (in_array($action, ['template','export'])) {
     $rowIdx=5;
     $kategoriOrder=['Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'];
     $kategoriLabel=['Tenaga Kesehatan'=>'A. Tenaga Kesehatan','Asisten Tenaga Kesehatan'=>'B. Asisten Tenaga Kesehatan','Tenaga Penunjang'=>'C. Tenaga Penunjang'];
-    $no=1;
     $grandTotal=0;
     $grouped=[];
     foreach($items as $it) $grouped[$it['kategori']][]=$it;
@@ -224,30 +251,33 @@ if (in_array($action, ['template','export'])) {
         $sheet->getRowDimension($rowIdx)->setRowHeight(18);
         $rowIdx++;
         $catSum=0;
+        // number counter per kategori for numeric No., letter for children
+        $numericNo=1;
+        // build sibling map for letter numbering
+        $parentChildren = [];
         foreach($grouped[$kat] as $it){
-            $isParent = isset($parentIds[$it['id']]);
-            if($isParent){
-                $sheet->setCellValue("A{$rowIdx}", '');
-                $sheet->setCellValue("B{$rowIdx}", $it['nama_item']);
-                $sheet->mergeCells("B{$rowIdx}:G{$rowIdx}");
-                $parentStyle=[
-                    'font'=>['bold'=>true,'italic'=>true],
-                    'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>'E2EFDA']],
-                    'borders'=>['allBorders'=>['borderStyle'=>Border::BORDER_THIN,'color'=>['rgb'=>'000000']]]
-                ];
-                $sheet->getStyle("A{$rowIdx}:G{$rowIdx}")->applyFromArray($parentStyle);
-                $rowIdx++;
-                continue;
+            $pid = $it['parent_id'] ?? $it['id_parent'];
+            if($pid) {
+                if(!isset($parentChildren[$pid])) $parentChildren[$pid]=[];
+                $parentChildren[$pid][]=$it;
             }
+        }
+        foreach($grouped[$kat] as $it){
             $d=$dataMap[$it['id']] ?? ['asn_l'=>0,'asn_p'=>0,'nonasn_l'=>0,'nonasn_p'=>0,'jumlah'=>0];
-            $sheet->setCellValue("A{$rowIdx}", $no);
-            $displayName = $it['nama_item'];
-            if($it['id_parent']){
-                $siblings=array_values(array_filter($grouped[$kat], fn($x)=>$x['id_parent']==$it['id_parent']));
+            $pid = $it['parent_id'] ?? $it['id_parent'];
+            $isChild = $pid !== null && $pid !== '' && (int)$pid !== 0;
+            if($isChild){
+                $siblings=$parentChildren[$pid] ?? [];
                 $idx=array_search($it['id'], array_column($siblings,'id'));
                 $letter=chr(97+($idx===false?0:$idx));
                 $displayName = "   {$letter}. ".$it['nama_item'];
+                $noDisplay = $letter.'.';
+            } else {
+                $displayName = $it['nama_item'];
+                $noDisplay = (string)$numericNo;
+                $numericNo++;
             }
+            $sheet->setCellValue("A{$rowIdx}", $noDisplay);
             $sheet->setCellValue("B{$rowIdx}", $displayName);
             $sheet->setCellValue("C{$rowIdx}", (int)$d['asn_l']);
             $sheet->setCellValue("D{$rowIdx}", (int)$d['asn_p']);
@@ -258,8 +288,10 @@ if (in_array($action, ['template','export'])) {
             $sheet->getStyle("A{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("C{$rowIdx}:G{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("B{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $catSum += (int)$d['jumlah'];
-            $no++;
+            // sum only include_in_total for A to avoid double count
+            $shouldInclude = true;
+            if($kat==='Tenaga Kesehatan' && (int)$it['include_in_total']===0) $shouldInclude=false;
+            if($shouldInclude) $catSum += (int)$d['jumlah'];
             $rowIdx++;
         }
         $sheet->mergeCells("A{$rowIdx}:B{$rowIdx}");
@@ -312,7 +344,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!$frow){ header("Location: sdmk.php?id_faskes=$id_faskes&msg=faskes_not_found"); exit; }
         $id_kecamatan=(int)$frow['id_kecamatan'];
         $items=getItems($config);
-        $parentIds=buildParentIds($items);
         $asn_l=$_POST['asn_l'] ?? [];
         $asn_p=$_POST['asn_p'] ?? [];
         $nonasn_l=$_POST['nonasn_l'] ?? [];
@@ -321,7 +352,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $success=0; $warnings=[];
         try{
             foreach($items as $it){
-                if(isset($parentIds[$it['id']])) continue;
+                if((int)$it['is_total_row']===1){
+                    // editable rule #4: tolak row total/header
+                    continue;
+                }
                 $pid=$it['id'];
                 $al=isset($asn_l[$pid]) ? max(0,(int)$asn_l[$pid]) : 0;
                 $ap=isset($asn_p[$pid]) ? max(0,(int)$asn_p[$pid]) : 0;
@@ -343,12 +377,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $ok=$stmt->execute();
                         if(!$ok){ $warnings[]="Gagal insert ".htmlspecialchars($it['nama_item']).": ".$stmt->error; } else { $success++; }
                     } else {
-                        // all zero and no existing row => count as success but no DB write
                         $success++;
                     }
                 }
             }
             $config->commit();
+            // if AJAX request, return JSON with recomputed totals
+            $isAjax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH'])==='xmlhttprequest') || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'],'application/json')!==false);
+            // also check explicit param ajax=1
+            if($isAjax || (isset($_POST['ajax']) && $_POST['ajax']=='1')){
+                header('Content-Type: application/json');
+                $totals=computeTotals($config, $id_faskes);
+                echo json_encode(['status'=>true,'success'=>$success,'warnings'=>$warnings,'totals'=>$totals]);
+                exit;
+            }
             if(!empty($warnings)){
                 if(session_status()===PHP_SESSION_NONE) session_start();
                 $_SESSION['save_result']=['success'=>$success,'warnings'=>$warnings];
@@ -359,11 +401,67 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             exit;
         } catch(Exception $e){
             $config->rollback();
+            $isAjax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH'])==='xmlhttprequest');
+            if($isAjax){
+                header('Content-Type: application/json', true, 500);
+                echo json_encode(['status'=>false,'error'=>$e->getMessage()]);
+                exit;
+            }
             if(session_status()===PHP_SESSION_NONE) session_start();
             $_SESSION['save_result']=['success'=>0,'warnings'=>[$e->getMessage()]];
             header("Location: sdmk.php?id_faskes=$id_faskes&msg=error");
             exit;
         }
+    }
+    if($act==='update_row'){
+        // AJAX single row update: expects id_profesi, asn_l, asn_p, nonasn_l, nonasn_p
+        $id_faskes=(int)($_POST['id_faskes'] ?? 0);
+        $id_profesi=(int)($_POST['id_profesi'] ?? 0);
+        if(!$id_faskes || !$id_profesi){
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['status'=>false,'error'=>'Missing id_faskes or id_profesi']);
+            exit;
+        }
+        // validate is_total_row
+        $chkItem=$config->prepare("SELECT is_total_row, kategori FROM tbl_sdm_items WHERE id=? LIMIT 1");
+        $chkItem->bind_param("i",$id_profesi);
+        $chkItem->execute();
+        $itemRow=$chkItem->get_result()->fetch_assoc();
+        if(!$itemRow){ http_response_code(404); header('Content-Type: application/json'); echo json_encode(['status'=>false,'error'=>'Item not found']); exit; }
+        if((int)$itemRow['is_total_row']===1){
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['status'=>false,'error'=>'Row is read-only (is_total_row=1)']);
+            exit;
+        }
+        $fchk=$config->prepare("SELECT id_kecamatan FROM tbl_faskes WHERE id_faskes=? LIMIT 1");
+        $fchk->bind_param("i",$id_faskes);
+        $fchk->execute();
+        $frow=$fchk->get_result()->fetch_assoc();
+        if(!$frow){ http_response_code(404); header('Content-Type: application/json'); echo json_encode(['status'=>false,'error'=>'Faskes not found']); exit; }
+        $id_kecamatan=(int)$frow['id_kecamatan'];
+        $al=max(0,(int)($_POST['asn_l'] ?? 0));
+        $ap=max(0,(int)($_POST['asn_p'] ?? 0));
+        $nl=max(0,(int)($_POST['nonasn_l'] ?? 0));
+        $np=max(0,(int)($_POST['nonasn_p'] ?? 0));
+        $chk=$config->prepare("SELECT id FROM tbl_sdm_faskes WHERE id_faskes=? AND id_profesi=? AND id_spesialis IS NULL LIMIT 1");
+        $chk->bind_param("ii",$id_faskes,$id_profesi);
+        $chk->execute();
+        $ex=$chk->get_result()->fetch_assoc();
+        if($ex){
+            $stmt=$config->prepare("UPDATE tbl_sdm_faskes SET asn_l=?, asn_p=?, nonasn_l=?, nonasn_p=?, id_kecamatan=?, aktif='Y', updated_at=NOW() WHERE id=?");
+            $stmt->bind_param("iiiiii",$al,$ap,$nl,$np,$id_kecamatan,$ex['id']);
+            $stmt->execute();
+        } else {
+            $stmt=$config->prepare("INSERT INTO tbl_sdm_faskes (id_kecamatan, id_faskes, id_profesi, id_spesialis, asn_l, asn_p, nonasn_l, nonasn_p, aktif) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 'Y')");
+            $stmt->bind_param("iiiiiii",$id_kecamatan,$id_faskes,$id_profesi,$al,$ap,$nl,$np);
+            $stmt->execute();
+        }
+        $totals=computeTotals($config, $id_faskes);
+        header('Content-Type: application/json');
+        echo json_encode(['status'=>true,'totals'=>$totals,'jumlah'=>$al+$ap+$nl+$np]);
+        exit;
     }
     if($act==='reset'){
         $id_faskes=(int)($_POST['id_faskes'] ?? 0);
@@ -379,6 +477,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $id_faskes=(int)($_POST['id_faskes'] ?? 0);
         $row_id=(int)($_POST['row_id'] ?? 0);
         if($row_id){
+            // validate that row's profesi is not is_total_row
+            $chk=$config->prepare("SELECT i.is_total_row FROM tbl_sdm_faskes f JOIN tbl_sdm_items i ON i.id=f.id_profesi WHERE f.id=? LIMIT 1");
+            $chk->bind_param("i",$row_id);
+            $chk->execute();
+            $r=$chk->get_result()->fetch_assoc();
+            if($r && (int)$r['is_total_row']===1){ http_response_code(403); die("Row is read-only"); }
             $stmt=$config->prepare("UPDATE tbl_sdm_faskes SET asn_l=0, asn_p=0, nonasn_l=0, nonasn_p=0, aktif='Y', updated_at=NOW() WHERE id=?");
             $stmt->bind_param("i",$row_id);
             $ok=$stmt->execute();
@@ -391,6 +495,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $id_faskes=(int)($_POST['id_faskes'] ?? 0);
         $row_id=(int)($_POST['row_id'] ?? 0);
         if($row_id){
+            $chk=$config->prepare("SELECT i.is_total_row FROM tbl_sdm_faskes f JOIN tbl_sdm_items i ON i.id=f.id_profesi WHERE f.id=? LIMIT 1");
+            $chk->bind_param("i",$row_id);
+            $chk->execute();
+            $r=$chk->get_result()->fetch_assoc();
+            if($r && (int)$r['is_total_row']===1){ http_response_code(403); die("Row is read-only"); }
             $stmt=$config->prepare("UPDATE tbl_sdm_faskes SET aktif='N', updated_at=NOW() WHERE id=?");
             $stmt->bind_param("i",$row_id);
             $ok=$stmt->execute();
@@ -421,7 +530,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ss=$reader->load($tmp);
             $sheet=$ss->getActiveSheet();
             $rows=$sheet->toArray(null,true,true,true);
-            // auto detect header row containing "Jenis SDM"
             $headerRow=null;
             foreach($rows as $rNum=>$row){
                 $b=trim((string)($row['B'] ?? ''));
@@ -433,7 +541,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_invalid_header");
                 exit;
             }
-            // validate L/P header in row headerRow+1 (C-F should be L,P,L,P)
             $hdr2=$rows[$headerRow+1] ?? null;
             if($hdr2){
                 $c=trim((string)($hdr2['C'] ?? '')); $d=trim((string)($hdr2['D'] ?? ''));
@@ -442,7 +549,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $actual=[$c,$d,$e,$f];
                 $actualUp=array_map(fn($x)=>strtoupper(trim($x)), $actual);
                 if($actualUp !== $expected){
-                    // also check if row above has ASN/Non ASN
                     $hdr1=$rows[$headerRow] ?? null;
                     $c1=trim((string)($hdr1['C'] ?? '')); $e1=trim((string)($hdr1['E'] ?? ''));
                     $asnOk = strcasecmp($c1,'ASN')===0 && strcasecmp($e1,'Non ASN')===0;
@@ -456,39 +562,75 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
             $dataStart=$headerRow+2;
             $items=getItems($config);
+            // map by normalized nama + kategori
             $map=[];
             foreach($items as $it){
                 $norm=normalizeNama($it['nama_item']);
-                $map[$norm]=$it['id'];
+                $key = $norm . '|' . strtolower($it['kategori']);
+                $map[$key]=$it['id'];
+                // also store fallback by just name for legacy single-match (but we will prefer kategori-aware)
             }
-            $parentIds=buildParentIds($items);
             $config->begin_transaction();
+            $currentKategori = null;
             foreach($rows as $rNum=>$row){
                 if((int)$rNum < $dataStart) continue;
                 $colB = trim((string)($row['B'] ?? ''));
+                $colA = trim((string)($row['A'] ?? ''));
                 if($colB==='') continue;
                 $lowerB=strtolower($colB);
-                if(strpos($lowerB,'tenaga kesehatan')!==false || strpos($lowerB,'asisten tenaga')!==false || strpos($lowerB,'tenaga penunjang')!==false) { $skipped++; continue; }
-                if(strpos($lowerB,'total')!==false) { $skipped++; continue; }
-                // parent names that are headers (exact parent name without child prefix)
-                $normExact=normalizeNama($colB);
-                // if exact parent name and it's a parent id, skip (it's header row)
-                if(isset($map[$normExact]) && isset($parentIds[$map[$normExact]]) ){
-                    // check if this row was parent header (has merged B-G, no numbers). Skip.
-                    // To distinguish parent header vs actual data, we can check if C-F empty and G empty: it's header.
-                    $cVal=trim((string)($row['C'] ?? '')); $dVal=trim((string)($row['D'] ?? '')); $eVal=trim((string)($row['E'] ?? '')); $fVal=trim((string)($row['F'] ?? ''));
-                    if($cVal==='' && $dVal==='' && $eVal==='' && $fVal===''){ $skipped++; continue; }
+                // detect kategori header rows: "A. Tenaga Kesehatan" etc
+                if(strpos($lowerB,'tenaga kesehatan')!==false && strpos($lowerB,'asisten')===false){
+                    // distinguish A vs C? A contains "tenaga kesehatan" without asisten/penunjang
+                    if(strpos($lowerB,'penunjang')===false){
+                        // could be A header
+                        if(strpos($lowerB,'a.')!==false || $lowerB==='a. tenaga kesehatan' || strpos($lowerB,'a. tenaga kesehatan')!==false){
+                            $currentKategori='Tenaga Kesehatan';
+                        } else if($colA==='' && strpos($lowerB,'tenaga kesehatan')!==false){
+                            // header row merged
+                            $currentKategori='Tenaga Kesehatan';
+                        }
+                    }
+                    if(strpos($lowerB,'asisten tenaga')!==false) $currentKategori='Asisten Tenaga Kesehatan';
+                    elseif(strpos($lowerB,'tenaga penunjang')!==false) $currentKategori='Tenaga Penunjang';
+                    $skipped++; continue;
                 }
-                // normalize for matching
+                if(strpos($lowerB,'asisten tenaga')!==false) { $currentKategori='Asisten Tenaga Kesehatan'; $skipped++; continue; }
+                if(strpos($lowerB,'tenaga penunjang')!==false) { $currentKategori='Tenaga Penunjang'; $skipped++; continue; }
+                if(strpos($lowerB,'total')!==false) { $skipped++; continue; }
+                // For rows with empty No. (header kategori) already handled. Also total rows have "Total"
+                // Now match
                 $norm = normalizeNama($colB);
-                if(!isset($map[$norm])){
-                    $warnings[]="Baris $rNum: Jenis SDM '".htmlspecialchars($colB)."' tidak ditemukan di master (normalisasi: '$norm'), di-skip. Tambahkan dulu di Master Jenis SDM.";
+                // try kategori-aware match first
+                $keyCat = $norm . '|' . strtolower($currentKategori ?? '');
+                $pid = null;
+                if($currentKategori && isset($map[$keyCat])){
+                    $pid=$map[$keyCat];
+                } else {
+                    // fallback: find any with same normalized name regardless of kategori (for unique names)
+                    // collect candidates
+                    $candidates=[];
+                    foreach($map as $k=>$v){
+                        $parts=explode('|',$k);
+                        if($parts[0]===$norm) $candidates[]=$v;
+                    }
+                    if(count($candidates)===1) $pid=$candidates[0];
+                    elseif(count($candidates)>1){
+                        // ambiguous (Gizi, Terapis Gigi) without kategori context => warning skip
+                        $warnings[]="Baris $rNum: Jenis SDM '".htmlspecialchars($colB)."' ambigu (muncul di 2 kategori), butuh konteks kategori — di-skip. Pastikan file memiliki header kategori A/B/C.";
+                        $skipped++; continue;
+                    }
+                }
+                if($pid===null){
+                    $warnings[]="Baris $rNum: Jenis SDM '".htmlspecialchars($colB)."' tidak ditemukan di master (normalisasi: '$norm', kategori: '".($currentKategori??'-')."'), di-skip.";
                     $skipped++;
                     continue;
                 }
-                $pid=$map[$norm];
-                if(isset($parentIds[$pid])){
-                    // parent should not have data, but if somehow matched as leaf, skip
+                // validate is_total_row not allowed
+                $chkItem=$config->prepare("SELECT is_total_row FROM tbl_sdm_items WHERE id=? LIMIT 1");
+                $chkItem->bind_param("i",$pid);
+                $chkItem->execute();
+                $itRow=$chkItem->get_result()->fetch_assoc();
+                if($itRow && (int)$itRow['is_total_row']===1){
                     $skipped++; continue;
                 }
                 $c = $row['C'] ?? 0; $d=$row['D'] ?? 0; $e=$row['E'] ?? 0; $f=$row['F'] ?? 0;
@@ -497,7 +639,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $orig=(string)$v;
                     $v=trim((string)$v);
                     if($v==='') $v=0;
-                    // allow commas
                     $v=str_replace(',','',$v);
                     if(!is_numeric($v) || (int)$v<0){
                         $warnings[]="Baris $rNum (".htmlspecialchars($colB)."): nilai '".htmlspecialchars($orig)."' pada kolom ".chr(67+$idx)." tidak valid (harus angka ≥0), dianggap 0.";
@@ -541,9 +682,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 // ---------- DATA FOR TAB ITEMS ----------
 $allItems = [];
-$q = $config->query("SELECT id, nama_item, kategori, id_parent, urutan, aktif FROM tbl_sdm_items ORDER BY FIELD(kategori,'Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'), urutan, nama_item");
+$q = $config->query("SELECT id, nama_item, kategori, parent_id, id_parent, urutan, is_total_row, include_in_total, aktif FROM tbl_sdm_items ORDER BY FIELD(kategori,'Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'), urutan, nama_item");
 while ($r = $q->fetch_assoc()) $allItems[] = $r;
-$parents = array_filter($allItems, fn($x)=> $x['aktif']==='Y');
+$parents = array_filter($allItems, fn($x)=> $x['aktif']==='Y' && (int)$x['is_total_row']===0);
 $parentMap = [];
 foreach ($allItems as $it) $parentMap[$it['id']] = $it['nama_item'];
 
@@ -558,10 +699,8 @@ if($selectedId){
     $selectedFaskes=$stmt->get_result()->fetch_assoc();
 }
 $items=getItems($config);
-$parentIds=buildParentIds($items);
 $dataMap=[];
 if($selectedFaskes){
-    // SUM across possible multiple spesialis rows per profesi (robust against duplicate NULL handling)
     $stmt=$config->prepare("SELECT id_profesi, SUM(asn_l) as asn_l, SUM(asn_p) as asn_p, SUM(nonasn_l) as nonasn_l, SUM(nonasn_p) as nonasn_p, SUM(jumlah) as jumlah, MAX(id) as id FROM tbl_sdm_faskes WHERE id_faskes=? AND aktif='Y' GROUP BY id_profesi");
     $stmt->bind_param("i",$selectedId);
     $stmt->execute();
@@ -626,16 +765,30 @@ $username=$_SESSION['admin_username'] ?? 'Admin';
 .alert-success{background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.2);color:#72e8ff}
 .alert-warning{background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.25);color:#ffd54f}
 .alert-error{background:rgba(255,82,82,0.12);border:1px solid rgba(255,82,82,0.2);color:#ff8a80}
-table{width:100%;border-collapse:collapse} table th{padding:12px 10px;color:#87e3ff;font-weight:600;font-size:13px;border-bottom:2px solid rgba(255,255,255,0.08)}
-table td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;vertical-align:middle}
+.sdmk-wrap{overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)}
+#rekapTable{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+#rekapTable col.col-no{width:52px} #rekapTable col.col-jenis{width:auto} #rekapTable col.col-num{width:74px} #rekapTable col.col-jml{width:78px} #rekapTable col.col-aksi{width:92px}
+#rekapTable th{padding:10px 8px;color:#87e3ff;font-weight:700;font-size:12px;letter-spacing:.3px;background:#0b223c;border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:2}
+#rekapTable th small{font-weight:500;opacity:.8}
+#rekapTable td{padding:8px 8px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;vertical-align:middle}
+#rekapTable tbody tr[data-kat]:nth-child(odd){background:rgba(255,255,255,0.02)}
+#rekapTable tbody tr[data-kat]:hover{background:rgba(0,212,255,0.06)}
+#rekapTable td.num{text-align:center;font-variant-numeric:tabular-nums}
+#rekapTable td.input-cell{padding:3px}
+#rekapTable td.input-cell input{width:100%;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#fff;text-align:center;font-weight:600;font-size:13px;transition:.15s}
+#rekapTable td.input-cell input:focus{outline:none;border-color:rgba(0,212,255,.6);background:rgba(0,212,255,.08);box-shadow:0 0 0 3px rgba(0,212,255,.12)}
+#rekapTable td.input-cell input::-webkit-outer-spin-button,#rekapTable td.input-cell input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#rekapTable td.input-cell input[type=number]{-moz-appearance:textfield}
+.jumlah-cell{font-weight:700;background:rgba(255,255,255,0.04);border-left:1px solid rgba(255,255,255,0.06)}
+.kategori-row{background:#FFF2CC;color:#111;font-weight:800;letter-spacing:.3px}
+.kategori-row td{padding:11px 12px;border-bottom:1px solid rgba(0,0,0,.08)}
+.total-row{background:#DDEBF7;color:#0b223c;font-weight:800}
+.total-row td{border-bottom:1px solid rgba(0,0,0,.08)}
+.grand-row{background:linear-gradient(135deg,#3a5bc7,#4472C4);color:#fff;font-weight:800}
+.grand-row td{padding:12px 10px}
+.child-row td:nth-child(2){border-left:3px solid rgba(255,213,79,.35);background:rgba(255,213,79,.04)}
 .th-center{text-align:center}
-table td.input-cell{padding:4px}
-table td.input-cell input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:#fff;text-align:center}
-table td.num{text-align:center}
-.kategori-row{background:#FFF2CC;color:#000;font-weight:700}
-.parent-row{background:#E2EFDA;color:#000;font-weight:600;font-style:italic}
-.total-row{background:#DDEBF7;color:#000;font-weight:700}
-.grand-row{background:#4472C4;color:#fff;font-weight:800}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
 #editModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:999;justify-content:center;align-items:center}
 .modal-box{background:#0b223c;padding:30px;border-radius:20px;max-width:600px;width:95%;border:1px solid rgba(255,255,255,0.1);max-height:90vh;overflow-y:auto}
 .tab-nav{display:flex;gap:12px;margin-bottom:24px}
@@ -670,7 +823,7 @@ table td.num{text-align:center}
 <?php if($msg==='added'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Jenis SDM berhasil ditambahkan.</div>
 <?php elseif($msg==='updated'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Berhasil diperbarui.</div>
 <?php elseif($msg==='deleted'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Dihapus (soft delete).</div>
-<?php elseif($msg==='exists'):?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Nama item sudah ada.</div>
+<?php elseif($msg==='exists'):?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Nama item sudah ada (duplikat nama+kategori).</div>
 <?php elseif($msg==='error'):?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Gagal memproses — cek log.</div>
 <?php else:?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Input tidak valid.</div>
 <?php endif; ?>
@@ -683,20 +836,22 @@ table td.num{text-align:center}
 <div class="form-group"><label>Urutan</label><input type="number" name="urutan" value="<?= count($allItems)+1 ?>" min="0"></div>
 </div><div style="margin-top:16px"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah</button></div></form></div>
 <div class="card"><h3><i class="fas fa-table" style="color:#00d4ff"></i> Daftar Jenis SDM (<?= count($allItems) ?>)</h3>
-<table><thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Parent</th><th>Urutan</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>
+<table><thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Parent</th><th>Urutan</th><th>Include</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>
 <?php foreach($allItems as $idx=>$row):
 $katClass = $row['kategori']==='Tenaga Kesehatan'?'badge-A':($row['kategori']==='Asisten Tenaga Kesehatan'?'badge-B':'badge-C');
 $letter = $row['kategori']==='Tenaga Kesehatan'?'A':($row['kategori']==='Asisten Tenaga Kesehatan'?'B':'C');
+$incLabel = (int)$row['include_in_total']===1 ? '<span style="color:#81c784">YA</span>' : '<span style="color:#ff8a80">TIDAK</span>';
 ?>
 <tr style="<?= $row['aktif']==='N'?'opacity:0.45':'' ?>">
 <td><?= $idx+1 ?></td>
-<td style="<?= $row['id_parent']?'padding-left:28px':'' ?>"><?php if($row['id_parent']):?><span style="color:#ffd54f">↳</span> <?php endif;?><?= htmlspecialchars($row['nama_item']) ?></td>
+<td style="<?= $row['parent_id']?'padding-left:28px':'' ?>"><?php if($row['parent_id']):?><span style="color:#ffd54f">↳</span> <?php endif;?><?= htmlspecialchars($row['nama_item']) ?></td>
 <td><span class="badge <?= $katClass ?>"><?= $letter ?>. <?= htmlspecialchars($row['kategori']) ?></span></td>
-<td><?= $row['id_parent'] ? htmlspecialchars($parentMap[$row['id_parent']] ?? '-') : '<span style="color:rgba(255,255,255,0.3)">-</span>' ?></td>
+<td><?= $row['parent_id'] ? htmlspecialchars($parentMap[$row['parent_id']] ?? '-') : '<span style="color:rgba(255,255,255,0.3)">-</span>' ?></td>
 <td><?= (int)$row['urutan'] ?></td>
+<td><?= $incLabel ?></td>
 <td><?= $row['aktif']==='Y' ? '<span style="color:#81c784">Y</span>' : '<span style="color:#ff6b6b">N</span>' ?></td>
 <td>
-<button class="btn-icon edit-btn" data-id="<?= $row['id'] ?>" data-nama="<?= htmlspecialchars($row['nama_item']) ?>" data-kategori="<?= htmlspecialchars($row['kategori']) ?>" data-parent="<?= (int)($row['id_parent']??0) ?>" data-urutan="<?= (int)$row['urutan'] ?>" data-aktif="<?= $row['aktif'] ?>"><i class="fas fa-pen"></i> Edit</button>
+<button class="btn-icon edit-btn" data-id="<?= $row['id'] ?>" data-nama="<?= htmlspecialchars($row['nama_item']) ?>" data-kategori="<?= htmlspecialchars($row['kategori']) ?>" data-parent="<?= (int)($row['parent_id']??0) ?>" data-urutan="<?= (int)$row['urutan'] ?>" data-aktif="<?= $row['aktif'] ?>"><i class="fas fa-pen"></i> Edit</button>
 <form method="POST" style="display:inline" onsubmit="return confirm('Nonaktifkan jenis ini? (soft delete)')"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="id" value="<?= $row['id'] ?>"><button type="submit" class="btn-icon btn-danger"><i class="fas fa-trash"></i></button></form>
 </td>
 </tr>
@@ -756,10 +911,11 @@ foreach($byJenis as $jenis=>$listJ):?>
 </div>
 <form method="POST" id="rekapForm">
 <input type="hidden" name="action" value="save_rekap"><input type="hidden" name="id_faskes" value="<?= $selectedId ?>">
-<div style="overflow:auto">
+<div class="sdmk-wrap">
 <table id="rekapTable">
+<colgroup><col class="col-no"><col class="col-jenis"><col class="col-num"><col class="col-num"><col class="col-num"><col class="col-num"><col class="col-jml"><col class="col-aksi"></colgroup>
 <thead>
-<tr><th rowspan="2" style="width:40px">No</th><th rowspan="2">Jenis SDM</th><th colspan="2">ASN</th><th colspan="2">Non ASN</th><th rowspan="2">Jumlah</th><th rowspan="2" style="min-width:110px">Aksi</th></tr>
+<tr><th rowspan="2">No</th><th rowspan="2">Jenis SDM</th><th colspan="2">ASN</th><th colspan="2">Non ASN</th><th rowspan="2">Jumlah</th><th rowspan="2">Aksi</th></tr>
 <tr><th>L</th><th>P</th><th>L</th><th>P</th></tr>
 </thead>
 <tbody>
@@ -767,33 +923,43 @@ foreach($byJenis as $jenis=>$listJ):?>
 $kategoriOrder=['Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'];
 $kategoriLabel=['Tenaga Kesehatan'=>'A. Tenaga Kesehatan','Asisten Tenaga Kesehatan'=>'B. Asisten Tenaga Kesehatan','Tenaga Penunjang'=>'C. Tenaga Penunjang'];
 $grouped=[]; foreach($items as $it) $grouped[$it['kategori']][]=$it;
-$no=1;
 foreach($kategoriOrder as $kat){
  if(empty($grouped[$kat])) continue;
  echo '<tr class="kategori-row"><td colspan="8">'.htmlspecialchars($kategoriLabel[$kat]).'</td></tr>';
+ // prepare sibling groups for letter indexing
+ $parentChildren=[];
  foreach($grouped[$kat] as $it){
-   $isParent=isset($parentIds[$it['id']]);
-   if($isParent){
-     echo '<tr class="parent-row"><td></td><td colspan="7">'.htmlspecialchars($it['nama_item']).'</td></tr>';
-     continue;
-   }
+   $pid = $it['parent_id'] ?? $it['id_parent'];
+   if($pid){ if(!isset($parentChildren[$pid])) $parentChildren[$pid]=[]; $parentChildren[$pid][]=$it; }
+ }
+ $numericNo=1;
+ foreach($grouped[$kat] as $it){
+   $pid = $it['parent_id'] ?? $it['id_parent'];
+   $isChild = $pid !== null && $pid !== '' && (int)$pid !== 0;
    $d=$dataMap[$it['id']] ?? ['asn_l'=>0,'asn_p'=>0,'nonasn_l'=>0,'nonasn_p'=>0,'jumlah'=>0,'id'=>0];
    $al=(int)$d['asn_l']; $ap=(int)$d['asn_p']; $nl=(int)$d['nonasn_l']; $np=(int)$d['nonasn_p']; $jum=$al+$ap+$nl+$np;
-   $display = htmlspecialchars($it['nama_item']);
-   if($it['id_parent']){
-     $siblings=array_values(array_filter($grouped[$kat], fn($x)=>$x['id_parent']==$it['id_parent']));
+   if($isChild){
+     $siblings=$parentChildren[$pid] ?? [];
      $idx=array_search($it['id'], array_column($siblings,'id'));
      $letter=chr(97+($idx===false?0:$idx));
      $display = htmlspecialchars($letter.'. '.$it['nama_item']);
+     $noDisplay = $letter.'.';
+     $prefix='&nbsp;&nbsp;&nbsp;';
+   } else {
+     $display = htmlspecialchars($it['nama_item']);
+     $noDisplay = (string)$numericNo;
+     $prefix='';
+     $numericNo++;
    }
-   $prefix = $it['id_parent'] ? '&nbsp;&nbsp;&nbsp;' : '';
-   echo '<tr data-kat="'.htmlspecialchars($kat).'">';
-   echo '<td class="num">'.$no.'</td>';
-   echo '<td>'.$prefix.$display.'</td>';
-   echo '<td class="input-cell"><input type="number" min="0" name="asn_l['.$it['id'].']" value="'.$al.'" class="inp"></td>';
-   echo '<td class="input-cell"><input type="number" min="0" name="asn_p['.$it['id'].']" value="'.$ap.'" class="inp"></td>';
-   echo '<td class="input-cell"><input type="number" min="0" name="nonasn_l['.$it['id'].']" value="'.$nl.'" class="inp"></td>';
-   echo '<td class="input-cell"><input type="number" min="0" name="nonasn_p['.$it['id'].']" value="'.$np.'" class="inp"></td>';
+    $includeFlag = (int)$it['include_in_total'];
+    $rowCls = $isChild ? ' child-row' : '';
+    echo '<tr class="'.trim($rowCls).'" data-kat="'.htmlspecialchars($kat).'" data-include="'.$includeFlag.'" data-profesi="'.$it['id'].'">';
+    echo '<td class="num">'.$noDisplay.'</td>';
+    echo '<td>'.$prefix.$display.'</td>';
+   echo '<td class="input-cell"><input type="number" min="0" name="asn_l['.$it['id'].']" value="'.$al.'" class="inp" data-profesi="'.$it['id'].'"></td>';
+   echo '<td class="input-cell"><input type="number" min="0" name="asn_p['.$it['id'].']" value="'.$ap.'" class="inp" data-profesi="'.$it['id'].'"></td>';
+   echo '<td class="input-cell"><input type="number" min="0" name="nonasn_l['.$it['id'].']" value="'.$nl.'" class="inp" data-profesi="'.$it['id'].'"></td>';
+   echo '<td class="input-cell"><input type="number" min="0" name="nonasn_p['.$it['id'].']" value="'.$np.'" class="inp" data-profesi="'.$it['id'].'"></td>';
    echo '<td class="num jumlah-cell" style="font-weight:700;background:rgba(255,255,255,0.04)">'.$jum.'</td>';
     echo '<td class="num" style="display:flex;gap:6px;justify-content:center">';
     if($d['id']){
@@ -804,16 +970,15 @@ foreach($kategoriOrder as $kat){
     }
     echo '</td>';
    echo '</tr>';
-   $no++;
  }
- echo '<tr class="total-row" data-total-kat="'.htmlspecialchars($kat).'"><td colspan="2" style="text-align:right">Total '.htmlspecialchars($kategoriLabel[$kat]).'</td><td colspan="4"></td><td class="num cat-total">0</td><td></td></tr>';
+ echo '<tr class="total-row" data-total-kat="'.htmlspecialchars($kat).'"><td colspan="6" style="text-align:right">Total '.htmlspecialchars($kategoriLabel[$kat]).'</td><td class="num cat-total">0</td><td></td></tr>';
 }
-$lblGT = labelJenisFaskes($selectedFaskes['jenis']); echo '<tr class="grand-row"><td colspan="2" style="text-align:right">TOTAL SDM KESEHATAN dan TENAGA PENUNJANG DI '.$lblGT.' '.strtoupper(htmlspecialchars($selectedFaskes['nama_faskes'])).' TAHUN '.date('Y').'</td><td colspan="4"></td><td class="num" id="grandTotal">0</td><td></td></tr>';
+$lblGT = labelJenisFaskes($selectedFaskes['jenis']); echo '<tr class="grand-row"><td colspan="6" style="text-align:right">TOTAL SDM KESEHATAN dan TENAGA PENUNJANG DI '.$lblGT.' '.strtoupper(htmlspecialchars($selectedFaskes['nama_faskes'])).' TAHUN '.date('Y').'</td><td class="num" id="grandTotal">0</td><td></td></tr>';
 ?>
 </tbody>
 </table>
 </div>
-<div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Rekap</button><span style="font-size:11px;color:rgba(255,255,255,0.4)">Validasi: nilai negatif →0 | Baris kategori/parent tidak punya input | DB generated = JS</span></div>
+<div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Rekap</button><span style="font-size:11px;color:rgba(255,255,255,0.4)">Validasi: nilai negatif →0 | Semua baris bernomor editable | Header/Total read-only (otomatis)</span></div>
 </form>
 <form id="rowActionForm" method="POST" style="display:none">
 <input type="hidden" name="action" id="rowAction" value="">
@@ -837,12 +1002,18 @@ function postRowAction(action, rowId){
    let grand=0;
    rows.forEach(tr=>{
      const kat=tr.dataset.kat;
+     const include=tr.dataset.include;
      const inputs=tr.querySelectorAll('input.inp');
      let s=0;
      inputs.forEach(i=>{ let v=parseInt(i.value,10); if(isNaN(v)||v<0) v=0; s+=v; });
      tr.querySelector('.jumlah-cell').textContent=s;
-     catSums[kat]=(catSums[kat]||0)+s;
-     grand+=s;
+     // For Tenaga Kesehatan, only include_in_total=1 counts to total
+     let counts=true;
+     if(kat==='Tenaga Kesehatan' && include==='0') counts=false;
+     if(counts){
+       catSums[kat]=(catSums[kat]||0)+s;
+       grand+=s;
+     }
    });
    table.querySelectorAll('tr[data-total-kat]').forEach(tr=>{
      const k=tr.dataset.totalKat;
