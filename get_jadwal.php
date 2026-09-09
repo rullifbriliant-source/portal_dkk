@@ -28,7 +28,7 @@ ORDER BY waktu_mulai ASC
 ";
 
 
-$query=mysqli_query($koneksi,$sql);
+$query=mysqli_query($config,$sql);
 
 
 $data=[];

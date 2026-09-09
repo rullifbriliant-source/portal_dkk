@@ -16,8 +16,8 @@ if (!defined('PORTAL_START')) {
 |--------------------------------------------------------------------------
 */
 
-require_once dirname(__DIR__,2).'/config/app.php';
-require_once dirname(__DIR__,2).'/config/database.php';
+require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/database.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -25,11 +25,11 @@ require_once dirname(__DIR__,2).'/config/database.php';
 |--------------------------------------------------------------------------
 */
 
-require_once dirname(__DIR__).'/Helpers/functions.php';
-require_once dirname(__DIR__).'/Helpers/format.php';
-require_once dirname(__DIR__).'/Helpers/url.php';
-require_once dirname(__DIR__).'/Helpers/response.php';
-require_once dirname(__DIR__)."/Services/LauncherService.php";
+if (is_file(dirname(__DIR__).'/Helpers/functions.php')) require_once dirname(__DIR__).'/Helpers/functions.php';
+if (is_file(dirname(__DIR__).'/Helpers/format.php'))    require_once dirname(__DIR__).'/Helpers/format.php';
+if (is_file(dirname(__DIR__).'/Helpers/url.php'))       require_once dirname(__DIR__).'/Helpers/url.php';
+if (is_file(dirname(__DIR__).'/Helpers/response.php'))  require_once dirname(__DIR__).'/Helpers/response.php';
+if (is_file(dirname(__DIR__).'/Services/LauncherService.php')) require_once dirname(__DIR__)."/Services/LauncherService.php";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,13 +37,13 @@ require_once dirname(__DIR__)."/Services/LauncherService.php";
 |--------------------------------------------------------------------------
 */
 
-require_once __DIR__.'/Database.php';
-require_once __DIR__.'/Session.php';
-require_once __DIR__.'/Auth.php';
-require_once __DIR__.'/Permission.php';
-require_once __DIR__.'/Activity.php';
-require_once __DIR__.'/Notification.php';
-require_once __DIR__.'/Module.php';
+foreach (['Database.php','Session.php','Auth.php','Permission.php','Activity.php','Notification.php','Module.php'] as $__f) {
+    $__p = __DIR__ . '/' . $__f;
+    if (is_file($__p)) require_once $__p;
+    // fallback ke App/Core jika tidak ada di config/
+    $__p2 = dirname(__DIR__) . '/App/Core/' . $__f;
+    if (!is_file(__DIR__.'/'.$__f) && is_file($__p2)) require_once $__p2;
+}
 
 /*
 |--------------------------------------------------------------------------

@@ -13,7 +13,7 @@ LIMIT 1
 ";
 
 
-$result=mysqli_query($koneksi,$sql);
+$result=mysqli_query($config,$sql);
 
 
 if($result && mysqli_num_rows($result)>0){

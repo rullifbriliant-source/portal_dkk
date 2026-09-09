@@ -1,25 +1,7 @@
 <?php
-
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "portal_dkk";
-
-// Membuat koneksi
-$config = mysqli_connect(
-    $host,
-    $username,
-    $password,
-    $database
-);
-
-// Cek koneksi
-if (!$config) {
-    die(
-        "Koneksi database gagal: " .
-        mysqli_connect_error()
-    );
-}
-
-// Set charset
-mysqli_set_charset($config, "utf8mb4");
+/**
+ * LEGACY WRAPPER — admin/config/database.php
+ * Jangan hardcode di sini. Semua kredensial terpusat di config/database.php (baca dari .env).
+ * File ini dipertahankan untuk kompatibilitas include lama, cukup delegasi ke file pusat.
+ */
+require_once __DIR__ . '/../../config/database.php';
