@@ -135,6 +135,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 aktif='$aktif'
                 WHERE id_faskes=$id";
         mysqli_query($config, $sql);
+
+        // Jumlah Total Kasur: berlaku SEMUA jenis fasyankes, field terisi saja.
+        // Kosong = jangan sentuh data kasur existing.
+        $kasurRaw = trim((string)($_POST['jumlah_kasur'] ?? ''));
+        if ($kasurRaw !== '' && preg_match('/^\d+$/', $kasurRaw)) {
+            $kasur = (int)$kasurRaw;
+            $katUmum = 'Umum';
+            $stBed = mysqli_prepare($config, "SELECT id FROM tbl_faskes_bed WHERE id_faskes=? AND kategori=? LIMIT 1");
+            if ($stBed) {
+                mysqli_stmt_bind_param($stBed, 'is', $id, $katUmum);
+                mysqli_stmt_execute($stBed);
+                $resBed = mysqli_stmt_get_result($stBed);
+                $exBed = $resBed ? mysqli_fetch_assoc($resBed) : null;
+                mysqli_stmt_close($stBed);
+                if ($exBed) {
+                    $eidBed = (int)$exBed['id'];
+                    $stBedU = mysqli_prepare($config, "UPDATE tbl_faskes_bed SET total=?, tersedia=?, aktif='Y' WHERE id=?");
+                    if ($stBedU) {
+                        mysqli_stmt_bind_param($stBedU, 'iii', $kasur, $kasur, $eidBed);
+                        mysqli_stmt_execute($stBedU);
+                        mysqli_stmt_close($stBedU);
+                    }
+                } else {
+                    $stBedI = mysqli_prepare($config, "INSERT INTO tbl_faskes_bed (id_faskes, kategori, total, tersedia, aktif) VALUES (?, ?, ?, ?, 'Y')");
+                    if ($stBedI) {
+                        mysqli_stmt_bind_param($stBedI, 'isii', $id, $katUmum, $kasur, $kasur);
+                        mysqli_stmt_execute($stBedI);
+                        mysqli_stmt_close($stBedI);
+                    }
+                }
+            }
+        }
+
         header("Location: fasyankes.php?msg=updated");
         exit;
     }
@@ -143,6 +176,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $id = (int)$_POST['id_faskes'];
         mysqli_query($config, "UPDATE tbl_faskes SET aktif='N' WHERE id_faskes=$id");
+        $stBedD = mysqli_prepare($config, "UPDATE tbl_faskes_bed SET aktif='N' WHERE id_faskes=?");
+        if ($stBedD) {
+            mysqli_stmt_bind_param($stBedD, 'i', $id);
+            mysqli_stmt_execute($stBedD);
+            mysqli_stmt_close($stBedD);
+        }
         header("Location: fasyankes.php?msg=deleted");
         exit;
     }
@@ -305,10 +344,13 @@ if ($search) {
 }
 $whereSql = implode(' AND ', $whereClauses);
 
-$sqlFaskes = "SELECT f.*, k.nama_kecamatan 
-              FROM tbl_faskes f 
-              LEFT JOIN tbl_kecamatan k ON f.id_kecamatan = k.id_kecamatan 
-              WHERE $whereSql 
+$sqlFaskes = "SELECT f.*, k.nama_kecamatan,
+              (SELECT b.total FROM tbl_faskes_bed b
+               WHERE b.id_faskes = f.id_faskes AND b.kategori = 'Umum' AND b.aktif = 'Y'
+               LIMIT 1) AS jumlah_kasur
+              FROM tbl_faskes f
+              LEFT JOIN tbl_kecamatan k ON f.id_kecamatan = k.id_kecamatan
+              WHERE $whereSql
               ORDER BY k.nama_kecamatan ASC, f.nama_faskes ASC";
 $dataFaskes = mysqli_query($config, $sqlFaskes);
 
@@ -426,6 +468,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         /* MODAL */
         #editModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); z-index:999; justify-content:center; align-items:center; }
         .modal-box { background:#0b223c; padding:35px; border-radius:24px; max-width:650px; width:95%; border:1px solid rgba(255,255,255,0.1); box-shadow:0 30px 60px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto; }
+        /* Sembunyikan scrollbar visual modal (scroll mouse/trackpad/keyboard tetap jalan) */
+        #editModal .modal-box, #importModal .modal-box { scrollbar-width:none; -ms-overflow-style:none; }
+        #editModal .modal-box::-webkit-scrollbar, #importModal .modal-box::-webkit-scrollbar { display:none; }
         .modal-box h2 { color:#84e7ff; margin-bottom:20px; font-size:20px; }
         .modal-actions { display:flex; gap:12px; margin-top:24px; justify-content:flex-end; }
         .modal-actions .btn-secondary { padding:10px 20px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.6); cursor:pointer; transition:0.3s; }
@@ -453,6 +498,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="spm.php"><i class="fas fa-chart-pie"></i> SPM</a></li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
@@ -656,6 +702,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                         <?php if (!empty($row['email'])): ?>
                             <div><i class="fas fa-envelope" style="font-size:11px;color:#87e3ff;"></i> <?= htmlspecialchars($row['email']) ?></div>
                         <?php endif; ?>
+                        <?php if ($row['jumlah_kasur'] !== null): ?>
+                            <div><i class="fas fa-bed" style="font-size:11px;color:#87e3ff;"></i> Jumlah Total Kasur: <b><?= number_format((int)$row['jumlah_kasur']) ?></b></div>
+                        <?php endif; ?>
                         <?php if (empty($row['telepon']) && empty($row['email'])): ?>
                             <span style="color:rgba(255,255,255,0.3);">-</span>
                         <?php endif; ?>
@@ -670,6 +719,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                             data-alamat="<?= htmlspecialchars($row['alamat'] ?? '') ?>"
                             data-telepon="<?= htmlspecialchars($row['telepon'] ?? '') ?>"
                             data-email="<?= htmlspecialchars($row['email'] ?? '') ?>"
+                            data-kasur="<?= $row['jumlah_kasur'] === null ? '' : (int)$row['jumlah_kasur'] ?>"
                             data-foto="<?= $fotoPath ? htmlspecialchars($fotoPath) : '' ?>">
                             <i class="fas fa-pen"></i> Edit
                         </button>
@@ -757,6 +807,11 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
                     <label>Email</label>
                     <input type="email" name="email" id="editEmail">
                 </div>
+                <div class="form-group" id="kasurFieldWrap">
+                    <label>Jumlah Total Kasur</label>
+                    <input type="number" name="jumlah_kasur" id="editKasur" min="0" step="1" placeholder="Belum diisi">
+                    <span class="info-hint" style="color:rgba(255,255,255,0.4);font-size:11px;">Berlaku semua jenis faskes. Kosongkan bila belum ada data.</span>
+                </div>
                 <div class="form-group" style="grid-column: span 2;">
                     <label>Alamat Lengkap</label>
                     <input type="text" name="alamat" id="editAlamat">
@@ -788,6 +843,7 @@ document.querySelectorAll('.edit-btn').forEach(btn => {
         document.getElementById('editTelepon').value = this.dataset.telepon;
         document.getElementById('editEmail').value = this.dataset.email;
         document.getElementById('editAlamat').value = this.dataset.alamat;
+        document.getElementById('editKasur').value = this.dataset.kasur || '';
 
         var fotoUrl = this.dataset.foto;
         var preview = document.getElementById('editFotoPreview');

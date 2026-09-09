@@ -187,39 +187,75 @@ const SpmModal = {
             return;
         }
 
+        // Header meniru Excel: No | Jenis Layanan SPM | [Indikator Kinerja / Jenis Layanan SPM (C+D)] |
+        // SATUAN | [Indikator Pencapaian / Output Kecamatan (12 kec)] | TOTAL. Tanpa kolom Sasaran.
         let html = '<table class="spm-table"><thead><tr>';
-        html += '<th rowspan="2" style="min-width:44px">No</th>';
-        html += '<th rowspan="2" style="min-width:220px">Jenis Layanan</th>';
-        html += '<th rowspan="2" style="min-width:260px">Indikator / Sub-Indikator</th>';
-        html += '<th rowspan="2" style="min-width:90px">Satuan</th>';
-        html += '<th rowspan="2" style="min-width:110px">Sasaran</th>';
-        html += '<th colspan="' + kec.length + '">Target Per Kecamatan</th>';
-        html += '<th rowspan="2" style="min-width:90px">TOTAL</th>';
+        html += '<th rowspan="2" class="h-no">No</th>';
+        html += '<th rowspan="2" class="h-layanan">Jenis Layanan SPM</th>';
+        html += '<th colspan="2" class="h-indikator">Indikator Kinerja / Jenis Layanan SPM</th>';
+        html += '<th rowspan="2" class="h-satuan">SATUAN</th>';
+        html += '<th colspan="' + kec.length + '" class="h-kec-group">Indikator Pencapaian / Output Kecamatan</th>';
+        html += '<th rowspan="2" class="h-total">TOTAL</th>';
         html += '</tr><tr>';
         kec.forEach(function (k) {
-            html += '<th style="min-width:78px">' + SpmModal.esc(k.charAt(0) + k.slice(1).toLowerCase()) + '</th>';
+            html += '<th class="h-kec">' + SpmModal.esc(k) + '</th>';
         });
         html += '</tr></thead><tbody>';
 
-        let no = 1;
         const self = this;
-        names.forEach(function (layanan) {
+        // Label struktural baris utama (template Excel). BUKAN data: nilai
+        // target/satuan diisi dari database bila baris induk tersedia.
+        const SASARAN_LABEL = "\u2022 Jumlah yang Harus Dilayani :";
+        names.forEach(function (layanan, li) {
             const rows = groups[layanan];
-            rows.forEach(function (row, idx) {
-                html += '<tr>';
-                html += '<td class="col-no">' + (no++) + '</td>';
-                if (idx === 0) {
-                    html += '<td class="col-layanan" rowspan="' + rows.length + '">' + self.esc(layanan) + '</td>';
-                }
-                html += '<td class="col-indikator">' + (row.sub_no ? self.esc(row.sub_no) + '. ' : '') + self.esc(row.indikator) + '</td>';
-                html += '<td class="col-satuan">' + self.esc(row.satuan || "-") + '</td>';
-                html += '<td class="col-sasaran">' + self.esc(row.sasaran || "-") + '</td>';
-                kec.forEach(function (k) {
-                    html += '<td class="col-angka">' + self.fmt((row.targets || {})[k]) + '</td>';
-                });
-                html += '<td class="col-total">' + self.fmt(row.total) + '</td>';
-                html += '</tr>';
+            const layNo = li + 1;
+            // Baris utama SETIAP jenis layanan (selalu dirender, biru penuh).
+            // Bila database memuat baris induknya, pakai nilai aslinya;
+            // bila tidak, cell nilai dibiarkan kosong (tanpa mengarang data).
+            let startIdx = 0;
+            let p = null;
+            if (rows.length && /jumlah yang harus dilayani/i.test(rows[0].indikator || "")) {
+                p = rows[0];
+                startIdx = 1;
+            }
+            const pTargets = (p && p.targets) || {};
+            html += '<tr class="row-layanan">';
+            html += '<td class="c-no">' + layNo + '</td>';
+            html += '<td class="c-layanan">' + self.esc(layanan) + '</td>';
+            html += '<td class="c-sub" colspan="2">' + self.esc(p ? p.indikator : SASARAN_LABEL) + '</td>';
+            html += '<td class="c-satuan">' + self.esc((p && p.satuan) || "") + '</td>';
+            kec.forEach(function (k) {
+                const tv = pTargets[k];
+                html += '<td class="c-angka">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
             });
+            html += '<td class="c-total">' + ((p && p.total !== null && p.total !== undefined && p.total !== "") ? self.fmt(p.total) : "") + '</td>';
+            html += '</tr>';
+            let num = 1;
+            for (let i = startIdx; i < rows.length; i++) {
+                const row = rows[i];
+                // Kuning (seperti Excel) hanya untuk baris total kabupaten:
+                // total_manual terisi DAN tidak ada rincian target kecamatan.
+                let kecSum = 0;
+                kec.forEach(function (k) { kecSum += Number((row.targets || {})[k]) || 0; });
+                const isManual = (row.total_manual !== null && row.total_manual !== "" && kecSum === 0);
+                html += '<tr' + (isManual ? ' class="row-manual"' : '') + '>';
+                // Kolom A/B selalu kosong di baris indikator: No + nama layanan
+                // sudah tampil pada baris utama (biru) di atas grupnya.
+                html += '<td class="c-no"></td>';
+                html += '<td class="c-layanan"></td>';
+                // Kolom C: sub_no bila ada, jika tidak pakai nomor urut dalam grup.
+                const subNo = (row.sub_no !== null && row.sub_no !== undefined && String(row.sub_no).trim() !== "")
+                    ? String(row.sub_no).trim() : String(num);
+                html += '<td class="c-sub">' + self.esc(subNo) + '</td>';
+                html += '<td class="c-indikator">' + self.esc(row.indikator) + '</td>';
+                html += '<td class="c-satuan">' + self.esc(row.satuan || "") + '</td>';
+                kec.forEach(function (k) {
+                    html += '<td class="c-angka">' + self.fmt((row.targets || {})[k]) + '</td>';
+                });
+                html += '<td class="c-total">' + self.fmt(row.total) + '</td>';
+                html += '</tr>';
+                num++;
+            }
         });
         html += '</tbody></table>';
         body.innerHTML = html;

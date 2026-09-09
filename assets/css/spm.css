@@ -141,13 +141,13 @@ table.spm-table {
     width: max-content;
     min-width: 100%;
     font-size: 12px;
-    color: #1a1a1a;
+    color: #000;
     background: #fff;
 }
 
 .spm-table th,
 .spm-table td {
-    border: 1px solid #7f8c9b;
+    border: 1px solid #595959;
     padding: 7px 9px;
     white-space: normal;
     word-wrap: break-word;
@@ -155,9 +155,10 @@ table.spm-table {
     vertical-align: middle;
 }
 
+/* Header kuning emas seperti Excel (FFC000, teks hitam, bold, center) */
 .spm-table thead th {
-    background: #1f4e78;
-    color: #fff;
+    background: #FFC000;
+    color: #000;
     font-weight: 700;
     text-align: center;
     position: sticky;
@@ -165,60 +166,72 @@ table.spm-table {
     z-index: 5;
 }
 
+.spm-table thead tr:first-child th {
+    white-space: nowrap;
+}
+
 .spm-table thead tr:nth-child(2) th {
     top: 33px;
-    background: #2e75b6;
+    background: #FFC000;
+    color: #000;
     z-index: 5;
 }
 
-.spm-table tbody td.col-no {
-    text-align: center;
-    width: 44px;
-    min-width: 44px;
+.spm-table th.h-no, .spm-table td.c-no { min-width: 44px; }
+.spm-table th.h-layanan, .spm-table td.c-layanan { min-width: 200px; max-width: 260px; }
+.spm-table th.h-indikator { min-width: 370px; }
+.spm-table td.c-sub { min-width: 50px; }
+.spm-table td.c-indikator { min-width: 320px; max-width: 420px; }
+.spm-table th.h-satuan, .spm-table td.c-satuan { min-width: 90px; }
+.spm-table th.h-kec, .spm-table td.c-angka { min-width: 80px; }
+.spm-table th.h-total, .spm-table td.c-total { min-width: 90px; }
+
+/* Body putih seperti Excel */
+.spm-table tbody td {
+    background: #fff;
+    color: #000;
+    font-weight: 400;
 }
 
-.spm-table tbody td.col-layanan {
+.spm-table tbody td.c-no { text-align: center; }
+.spm-table tbody td.c-layanan { text-align: left; }
+.spm-table tbody td.c-layanan:not(:empty) {
+    background: #B4C6E7;
     font-weight: 700;
-    background: #fff2cc;
-    min-width: 220px;
-    max-width: 300px;
-    text-align: left;
 }
-
-.spm-table tbody td.col-indikator {
-    min-width: 260px;
-    max-width: 360px;
-    text-align: left;
-}
-
-.spm-table tbody td.col-satuan,
-.spm-table tbody td.col-sasaran {
-    text-align: center;
-    min-width: 90px;
-    max-width: 150px;
-}
-
-.spm-table tbody td.col-angka {
+.spm-table tbody td.c-sub { text-align: center; }
+.spm-table tbody td.c-indikator { text-align: left; }
+.spm-table tbody td.c-satuan { text-align: center; }
+.spm-table tbody td.c-angka {
     text-align: right;
-    min-width: 78px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
-
-.spm-table tbody td.col-total {
-    text-align: right;
+.spm-table tbody td.c-total {
+    text-align: center;
     font-weight: 700;
-    background: #ddebf7;
-    min-width: 90px;
+    background: #B4C6E7;
     white-space: nowrap;
 }
 
-.spm-table tbody tr:nth-child(even) td:not(.col-layanan):not(.col-total) {
-    background: #f2f7fc;
+/* Baris utama jenis layanan: biru muda + bold (B4C6E7, seperti Excel) */
+.spm-table tbody tr.row-layanan td {
+    background: #B4C6E7;
+    color: #000;
+    font-weight: 700;
 }
+.spm-table tbody tr.row-layanan td.c-sub { text-align: left; }
 
-.spm-table tbody tr:hover td {
-    background: #e3f2fd !important;
+/* Baris total kabupaten (total_manual tanpa rincian): kuning (FFFF00, seperti Excel).
+   Kolom TOTAL tetap biru bold mengikuti format Excel. */
+.spm-table tbody tr.row-manual td {
+    background: #FFFF00;
+    color: #000;
+    font-weight: 400;
+}
+.spm-table tbody tr.row-manual td.c-total {
+    background: #B4C6E7;
+    font-weight: 700;
 }
 
 .spm-footer {

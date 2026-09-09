@@ -110,7 +110,12 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     </div>
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-        <li><a href="spm.php"><i class="fas fa-chart-pie"></i> SPM</a></li>
+        <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
+        <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
+        <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
+        <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li><a href="spm.php" class="active"><i class="fas fa-chart-pie"></i> SPM</a></li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>

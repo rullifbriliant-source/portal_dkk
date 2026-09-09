@@ -36,7 +36,10 @@ $sql = "SELECT
             f.telepon,
             f.email,
             f.foto,
-            f.aktif
+            f.aktif,
+            (SELECT b.total FROM tbl_faskes_bed b
+             WHERE b.id_faskes = f.id_faskes AND b.kategori = 'Umum' AND b.aktif = 'Y'
+             LIMIT 1) AS jumlah_kasur
         FROM tbl_faskes f
         LEFT JOIN tbl_kecamatan k ON f.id_kecamatan = k.id_kecamatan
         WHERE $whereSql
@@ -55,6 +58,8 @@ if (!$query) {
 $data = [];
 
 while ($row = mysqli_fetch_assoc($query)) {
+    // null bila belum ada data (jangan tampilkan 0 palsu)
+    $row['jumlah_kasur'] = $row['jumlah_kasur'] === null ? null : (int)$row['jumlah_kasur'];
     $data[] = $row;
 }
 
