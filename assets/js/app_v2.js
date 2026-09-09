@@ -1581,7 +1581,12 @@ renderSdm: function(items) {
         if (!data.status) {
             return;
         }
-        Counter.start("statPenduduk", data.penduduk);
+        // statPenduduk dimiliki sumber resmi P1 (PendudukCard.refresh);
+        // abaikan nilai falsy dari get_dashboard.php agar tidak menimpa angka resmi.
+        // (Baris statProgram milik SPM di bawah ini TIDAK diubah.)
+        if (data.penduduk) {
+            Counter.start("statPenduduk", data.penduduk);
+        }
         Counter.start("statPuskesmas", data.puskesmas);
         Counter.start("statPustu", data.pustu);
         Counter.start("statProgram", data.program);
@@ -1811,6 +1816,13 @@ renderData: function(data) {
     this.setNumber("statFasyankesRS", d.rumah_sakit || d.jumlah_rumah_sakit || 0);
 
        this.lastData = d;
+
+    // ===== PENDUDUK RESMI P1: override Data Dasar (hanya Penduduk) =====
+    // Item Data Dasar lain (desa/puskesmas/pustu/posyandu) tidak diubah.
+    var namaKecP1 = d.nama || d.nama_kecamatan;
+    if (namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
+        PendudukCard.refreshDistrict(namaKecP1);
+    }
 
     // ===== PANGGIL PENYAKIT PER KECAMATAN =====
     var namaKec = d.nama || d.nama_kecamatan;
@@ -2217,6 +2229,14 @@ const FasyankesModal = {
                 this.escapeHtml(item.email) +
                 "</p>";
         }
+        // Jumlah Total Kasur: semua jenis faskes yang sudah punya data
+        // (null = belum diisi -> baris disembunyikan, tanpa 0 palsu).
+        if (item.jumlah_kasur !== null && item.jumlah_kasur !== undefined && item.jumlah_kasur !== "") {
+            infoHtml +=
+                '<p><i class="fas fa-bed"></i> Jumlah Total Kasur: ' +
+                this.escapeHtml(item.jumlah_kasur) +
+                "</p>";
+        }
 
         return (
             '<div class="faskes-item">' +
@@ -2517,6 +2537,78 @@ const SdmModal = {
    sehingga kolom tersebut ditampilkan sebagai tidak tersedia.
 ========================================================== */
 
+/* ==========================================================
+   CARD PENDUDUK — sumber resmi P1 (api/get_penduduk_desa.php)
+   Read-only. Gagal fetch = biarkan nilai lama (tanpa angka palsu).
+   Tidak menyentuh counter/wiring SPM.
+========================================================== */
+const PendudukCard = {
+    cache: null, cacheTime: 0, TTL: 60000,
+    getData: function() {
+        const self = this;
+        if (self.cache && (Date.now() - self.cacheTime) < self.TTL) {
+            return Promise.resolve(self.cache);
+        }
+        return PortalAPI.fetchJSON("api/get_penduduk_desa.php?ts=" + Date.now())
+            .then(function(json){
+                if (json && json.status && json.data && json.data.kabupaten) {
+                    self.cache = json;
+                    self.cacheTime = Date.now();
+                    return json;
+                }
+                throw new Error("API P1 tidak valid");
+            });
+    },
+    normName: function(s) {
+        return String(s == null ? "" : s).trim().toUpperCase();
+    },
+    findKec: function(all, name) {
+        if (!all || !all.data || !all.data.kecamatan) return null;
+        const want = this.normName(name);
+        if (!want) return null;
+        for (let i = 0; i < all.data.kecamatan.length; i++) {
+            if (this.normName(all.data.kecamatan[i].nama_kecamatan) === want) {
+                return all.data.kecamatan[i];
+            }
+        }
+        return null;
+    },
+    selectedName: function() {
+        if (typeof Dashboard === "undefined") return null;
+        if (Dashboard.currentDistrict) return Dashboard.currentDistrict;
+        if (Dashboard.lastData) {
+            return Dashboard.lastData.nama || Dashboard.lastData.nama_kecamatan || null;
+        }
+        return null;
+    },
+    refresh: function() {
+        const el = DOM.id("statPenduduk");
+        if (!el) return;
+        this.getData()
+            .then(function(json){
+                if (json.data.kabupaten.jumlah_penduduk) {
+                    Counter.start("statPenduduk", json.data.kabupaten.jumlah_penduduk);
+                }
+            })
+            .catch(function(){ /* biarkan nilai lama */ });
+    },
+    // Override Data Dasar: total resmi kecamatan terpilih (stale-guard).
+    refreshDistrict: function(name) {
+        const want = this.normName(name);
+        if (!want) return Promise.resolve();
+        return this.getData()
+            .then(function(json){
+                if (typeof Dashboard !== "undefined"
+                    && PendudukCard.normName(Dashboard.currentDistrict) !== want) return; // state sudah pindah
+                const hit = PendudukCard.findKec(json, want);
+                if (hit && typeof Dashboard !== "undefined") {
+                    Dashboard.setNumber("jumlahPenduduk", hit.jumlah_penduduk);
+                }
+            })
+            .catch(function(){ /* biarkan nilai lama dari api/kecamatan.php */ });
+    }
+};
+
 const PendudukModal = {
     init: function() {
         const box = DOM.id("statBoxPenduduk");
@@ -2532,9 +2624,16 @@ const PendudukModal = {
         Log.info("PendudukModal Ready");
     },
 
+    view: "auto", // auto|kab|kec — reset tiap open() agar tidak ada state tertinggal
+    kecId: 0,
+    reqId: 0,
+
     open: function() {
         const modal = DOM.id("pendudukModal");
         if (!modal) return;
+        this.view = "auto";
+        this.kecId = 0;
+        this.reqId++;
         modal.classList.add("show");
         this.showLoading();
         this.load();
@@ -2553,9 +2652,74 @@ const PendudukModal = {
 
     load: function() {
         const self = this;
-        this.fetchJSON("api/get_penduduk.php?ts=" + Date.now())
-            .then(function(json){ self.render(json); })
-            .catch(function(){ self.renderError(); });
+        const tk = this.reqId;
+        const selName = (typeof PendudukCard !== "undefined" && PendudukCard.selectedName)
+            ? PendudukCard.selectedName() : null;
+        PendudukCard.getData()
+            .then(function(all){
+                if (tk !== self.reqId) return; // respons basi (user sudah pindah) -> abaikan
+                const hit = (self.view !== "kab" && selName) ? PendudukCard.findKec(all, selName) : null;
+                if (!hit) {
+                    self.view = "kab";
+                    self.render(all);
+                    return;
+                }
+                self.view = "kec";
+                self.kecId = hit.id_kecamatan;
+                self.showLoading();
+                PortalAPI.fetchJSON("api/get_penduduk_desa.php?id_kecamatan=" + hit.id_kecamatan + "&ts=" + Date.now())
+                    .then(function(detail){
+                        if (tk !== self.reqId) return;
+                        self.renderKec(detail);
+                    })
+                    .catch(function(){ if (tk === self.reqId) self.renderError(); });
+            })
+            .catch(function(){ if (tk === self.reqId) self.renderError(); });
+    },
+
+    backToKab: function() {
+        this.view = "kab";
+        this.kecId = 0;
+        this.reqId++;
+        this.showLoading();
+        this.load();
+    },
+
+    renderKec: function(json) {
+        const sum = DOM.id("pendudukModalSummary");
+        const list = DOM.id("pendudukList");
+        if (!sum || !list) return;
+        if (!json || !json.status || !json.data || !json.data.kecamatan) {
+            this.renderError();
+            return;
+        }
+        const k = json.data.kecamatan;
+        const rows = json.data.desa_kelurahan || [];
+        const self = this;
+        let html = '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">KECAMATAN</div>'
+            + '<div style="font-size:20px;font-weight:700;color:#fff;">' + this.escapeHtml(k.nama_kecamatan) + '</div></div>';
+        html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL PENDUDUK</div>'
+            + '<div style="font-size:24px;font-weight:700;color:#fff;">' + Util.number(k.jumlah_penduduk || 0) + ' <span style="font-size:11px;color:rgba(255,255,255,0.5);">jiwa</span></div></div>';
+        html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">LAKI-LAKI</div>'
+            + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.laki_laki || 0) + '</div></div>';
+        html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">PEREMPUAN</div>'
+            + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.perempuan || 0) + '</div></div>';
+        html += '<div style="flex:1;min-width:140px;display:flex;align-items:center;"><button id="pendudukBackBtn" class="btn-icon" style="cursor:pointer;">← Kembali ke Kabupaten</button></div>';
+        sum.innerHTML = html;
+        const backBtn = DOM.id("pendudukBackBtn");
+        if (backBtn) backBtn.addEventListener("click", function(){ self.backToKab(); });
+
+        let body = '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:8px;">Daftar Desa/Kelurahan (' + rows.length + ')</div>';
+        body += '<table class="info-panel" style="width:100%;"><thead><tr><th style="text-align:left;">Desa/Kelurahan</th>'
+            + '<th>L</th><th>P</th><th style="text-align:right;">Total</th></tr></thead><tbody>';
+        rows.forEach(function(r){
+            body += '<tr><td style="text-align:left;">' + this.escapeHtml(r.nama) + '</td>'
+                + '<td>' + Util.number(r.laki_laki) + '</td><td>' + Util.number(r.perempuan) + '</td>'
+                + '<td style="text-align:right;font-weight:700;color:#72e8ff;">' + Util.number(r.jumlah) + '</td></tr>';
+        }, this);
+        body += '</tbody></table>';
+        body += '<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.35);">Sumber: tbl_desa_kelurahan.</div>';
+        list.innerHTML = body;
     },
 
     fetchJSON: function(url) {
@@ -2569,38 +2733,37 @@ const PendudukModal = {
         const sum = DOM.id("pendudukModalSummary");
         const list = DOM.id("pendudukList");
         if (!sum || !list) return;
-        if (!json || !json.status) {
+        if (!json || !json.status || !json.data || !json.data.kabupaten) {
             this.renderError();
             return;
         }
-        const rows = json.data || [];
+        const kab = json.data.kabupaten;
+        const rows = json.data.kecamatan || [];
         let html = '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">TOTAL PENDUDUK</div>'
-            + '<div style="font-size:24px;font-weight:700;color:#fff;">' + Util.number(json.total || 0) + ' <span style="font-size:11px;color:rgba(255,255,255,0.5);">jiwa</span></div></div>';
+            + '<div style="font-size:24px;font-weight:700;color:#fff;">' + Util.number(kab.jumlah_penduduk || 0) + ' <span style="font-size:11px;color:rgba(255,255,255,0.5);">jiwa</span></div></div>';
         html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">LAKI-LAKI</div>'
-            + '<div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.45);">-</div>'
-            + '<div style="font-size:10px;color:rgba(255,255,255,0.35);">belum tersedia di database</div></div>';
+            + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(kab.laki_laki || 0) + '</div></div>';
         html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">PEREMPUAN</div>'
-            + '<div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.45);">-</div>'
-            + '<div style="font-size:10px;color:rgba(255,255,255,0.35);">belum tersedia di database</div></div>';
+            + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(kab.perempuan || 0) + '</div></div>';
         sum.innerHTML = html;
 
         let body = '<table class="info-panel" style="width:100%;"><thead><tr><th style="text-align:left;">Kecamatan</th>'
             + '<th>Laki-laki</th><th>Perempuan</th><th style="text-align:right;">Total</th></tr></thead><tbody>';
         let max = null, min = null;
         rows.forEach(function(r){
-            body += '<tr><td style="text-align:left;">' + this.escapeHtml(r.kecamatan) + '</td>'
-                + '<td style="color:rgba(255,255,255,0.35);">-</td><td style="color:rgba(255,255,255,0.35);">-</td>'
-                + '<td style="text-align:right;font-weight:700;color:#72e8ff;">' + Util.number(r.penduduk) + '</td></tr>';
-            if (!max || r.penduduk > max.penduduk) max = r;
-            if (!min || r.penduduk < min.penduduk) min = r;
+            body += '<tr><td style="text-align:left;">' + this.escapeHtml(r.nama_kecamatan) + '</td>'
+                + '<td>' + Util.number(r.laki_laki) + '</td><td>' + Util.number(r.perempuan) + '</td>'
+                + '<td style="text-align:right;font-weight:700;color:#72e8ff;">' + Util.number(r.jumlah_penduduk) + '</td></tr>';
+            if (!max || r.jumlah_penduduk > max.jumlah_penduduk) max = r;
+            if (!min || r.jumlah_penduduk < min.jumlah_penduduk) min = r;
         }, this);
         body += '</tbody></table>';
         if (max && min) {
             body += '<div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.7);">'
-                + 'Terbanyak: <b style="color:#fff;">' + this.escapeHtml(max.kecamatan) + '</b> (' + Util.number(max.penduduk) + ' jiwa)'
-                + ' &nbsp;|&nbsp; Tersedikit: <b style="color:#fff;">' + this.escapeHtml(min.kecamatan) + '</b> (' + Util.number(min.penduduk) + ' jiwa)</div>';
+                + 'Terbanyak: <b style="color:#fff;">' + this.escapeHtml(max.nama_kecamatan) + '</b> (' + Util.number(max.jumlah_penduduk) + ' jiwa)'
+                + ' &nbsp;|&nbsp; Tersedikit: <b style="color:#fff;">' + this.escapeHtml(min.nama_kecamatan) + '</b> (' + Util.number(min.jumlah_penduduk) + ' jiwa)</div>';
         }
-        body += '<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.35);">Sumber: tbl_kecamatan (' + this.escapeHtml(json.source || '') + '). Rincian gender belum tersedia di database.</div>';
+        body += '<div style="margin-top:8px;font-size:10px;color:rgba(255,255,255,0.35);">Sumber: tbl_desa_kelurahan (data resmi ' + (kab.jumlah_desa_kelurahan || 0) + ' desa/kelurahan).</div>';
         list.innerHTML = body;
     },
 
@@ -2647,6 +2810,7 @@ const Startup = {
         FasyankesModal.init();
         SdmModal.init();
         PendudukModal.init();
+        PendudukCard.refresh();
 
         Log.info("%cPORTAL TERPADU DKK SUKOHARJO", "color:#00d4ff;font-size:16px;font-weight:bold");
         Log.info("Version : " + Portal.version);
