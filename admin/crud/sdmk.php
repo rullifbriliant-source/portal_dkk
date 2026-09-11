@@ -114,11 +114,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add
                     $stmt2->bind_param("ssiiiii", $nama, $kategori, $id_parent, $id_parent, $urutan, $is_total, $include);
                 }
                 $ok=$stmt2->execute();
-                if(!$ok){ header("Location: sdmk.php?tab=items&msg=error"); exit; }
-                header("Location: sdmk.php?tab=items&msg=added"); exit;
-            } else { header("Location: sdmk.php?tab=items&msg=exists"); exit; }
+                if(!$ok){ item_redirect('error'); }
+                item_redirect('added');
+            } else { item_redirect('exists'); }
         }
-        header("Location: sdmk.php?tab=items&msg=invalid"); exit;
+        item_redirect('invalid');
     }
     if($act0==='edit_item'){
         $id = (int)($_POST['id'] ?? 0);
@@ -145,18 +145,18 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add
             $dup->bind_param("ssi", $nama, $kategori, $id);
             $dup->execute();
             $dup->store_result();
-            if($dup->num_rows>0){ header("Location: sdmk.php?tab=items&msg=exists"); exit; }
+            if($dup->num_rows>0){ item_redirect('exists'); }
             if ($id_parent === null) {
                 $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, parent_id=NULL, id_parent=NULL, urutan=?, include_in_total=?, aktif=? WHERE id=?");
-                $stmt->bind_param("ssisii", $nama, $kategori, $urutan, $include, $aktif, $id);
+                $stmt->bind_param("ssiisi", $nama, $kategori, $urutan, $include, $aktif, $id);
             } else {
                 $stmt = $config->prepare("UPDATE tbl_sdm_items SET nama_item=?, kategori=?, parent_id=?, id_parent=?, urutan=?, include_in_total=?, aktif=? WHERE id=?");
-                $stmt->bind_param("ssiisiii", $nama, $kategori, $id_parent, $id_parent, $urutan, $include, $aktif, $id);
+                $stmt->bind_param("ssiiiisi", $nama, $kategori, $id_parent, $id_parent, $urutan, $include, $aktif, $id);
             }
             $stmt->execute();
-            header("Location: sdmk.php?tab=items&msg=updated"); exit;
+            item_redirect('updated');
         }
-        header("Location: sdmk.php?tab=items&msg=invalid"); exit;
+        item_redirect('invalid');
     }
     if($act0==='delete_item'){
         $id = (int)($_POST['id'] ?? 0);
@@ -165,7 +165,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && in_array($_POST['action'] ?? '', ['add
             $stmt->bind_param("i", $id);
             $stmt->execute();
         }
-        header("Location: sdmk.php?tab=items&msg=deleted"); exit;
+        item_redirect('deleted');
     }
 }
 
@@ -175,7 +175,7 @@ $id_faskes_req = (int)($_GET['id_faskes'] ?? $_POST['id_faskes'] ?? 0);
 
 if (in_array($action, ['template','export'])) {
     if (!$id_faskes_req) { header("Location: sdmk.php?msg=need_faskes"); exit; }
-    $stmt=$config->prepare("SELECT f.id_faskes, f.nama_faskes, f.jenis, f.id_kecamatan, k.nama_kecamatan FROM tbl_faskes f LEFT JOIN tbl_kecamatan k ON k.id_kecamatan=f.id_kecamatan WHERE f.id_faskes=? AND f.aktif='Y' LIMIT 1");
+    $stmt=$config->prepare("SELECT f.id_faskes, f.kode_faskes, f.nama_faskes, f.jenis, f.id_kecamatan, k.nama_kecamatan FROM tbl_faskes f LEFT JOIN tbl_kecamatan k ON k.id_kecamatan=f.id_kecamatan WHERE f.id_faskes=? AND f.aktif='Y' LIMIT 1");
     $stmt->bind_param("i",$id_faskes_req);
     $stmt->execute();
     $faskes=$stmt->get_result()->fetch_assoc();
@@ -194,43 +194,46 @@ if (in_array($action, ['template','export'])) {
     $sheet=$ss->getActiveSheet();
     $sheet->setTitle('SDMK');
     $title="DATA KETERSEDIAAN SDM KESEHATAN DAN TENAGA PENUNJANG DI ".$labelJenis." ".strtoupper($faskes['nama_faskes'])." TAHUN ".date('Y');
-    $sheet->mergeCells('A1:G1');
+    $sheet->mergeCells('A1:H1');
     $sheet->setCellValue('A1',$title);
     $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(11);
     $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheet->setCellValue('A2',$faskes['jenis'].': '.$faskes['nama_faskes'].' | Kecamatan: '.$faskes['nama_kecamatan']);
-    $sheet->mergeCells('A2:G2');
+    $sheet->mergeCells('A2:H2');
     $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(9);
-    $sheet->setCellValue('A3','No');
-    $sheet->setCellValue('B3','Jenis SDM');
-    $sheet->setCellValue('C3','ASN');
-    $sheet->setCellValue('E3','Non ASN');
-    $sheet->setCellValue('G3','Jumlah');
-    $sheet->mergeCells('C3:D3');
-    $sheet->mergeCells('E3:F3');
-    $sheet->setCellValue('C4','L');
-    $sheet->setCellValue('D4','P');
-    $sheet->setCellValue('E4','L');
-    $sheet->setCellValue('F4','P');
+    $sheet->setCellValue('A3','Kode Faskes');
+    $sheet->setCellValue('B3','No');
+    $sheet->setCellValue('C3','Jenis SDM');
+    $sheet->setCellValue('D3','ASN');
+    $sheet->setCellValue('F3','Non ASN');
+    $sheet->setCellValue('H3','Jumlah');
+    $sheet->mergeCells('D3:E3');
+    $sheet->mergeCells('F3:G3');
+    $sheet->setCellValue('D4','L');
+    $sheet->setCellValue('E4','P');
+    $sheet->setCellValue('F4','L');
+    $sheet->setCellValue('G4','P');
     $sheet->setCellValue('A4','');
     $sheet->setCellValue('B4','');
-    $sheet->setCellValue('G4','');
+    $sheet->setCellValue('C4','');
+    $sheet->setCellValue('H4','');
     $headerStyle=[
         'font'=>['bold'=>true,'color'=>['rgb'=>'000000']],
         'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>'BDD7EE']],
         'alignment'=>['horizontal'=>Alignment::HORIZONTAL_CENTER,'vertical'=>Alignment::VERTICAL_CENTER],
         'borders'=>['allBorders'=>['borderStyle'=>Border::BORDER_THIN,'color'=>['rgb'=>'000000']]]
     ];
-    $sheet->getStyle('A3:G4')->applyFromArray($headerStyle);
+    $sheet->getStyle('A3:H4')->applyFromArray($headerStyle);
     $sheet->getRowDimension(3)->setRowHeight(22);
     $sheet->getRowDimension(4)->setRowHeight(18);
-    $sheet->getColumnDimension('A')->setWidth(6);
-    $sheet->getColumnDimension('B')->setWidth(42);
-    $sheet->getColumnDimension('C')->setWidth(10);
+    $sheet->getColumnDimension('A')->setWidth(14);
+    $sheet->getColumnDimension('B')->setWidth(6);
+    $sheet->getColumnDimension('C')->setWidth(42);
     $sheet->getColumnDimension('D')->setWidth(10);
     $sheet->getColumnDimension('E')->setWidth(10);
     $sheet->getColumnDimension('F')->setWidth(10);
-    $sheet->getColumnDimension('G')->setWidth(12);
+    $sheet->getColumnDimension('G')->setWidth(10);
+    $sheet->getColumnDimension('H')->setWidth(12);
     $rowIdx=5;
     $kategoriOrder=['Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'];
     $kategoriLabel=['Tenaga Kesehatan'=>'A. Tenaga Kesehatan','Asisten Tenaga Kesehatan'=>'B. Asisten Tenaga Kesehatan','Tenaga Penunjang'=>'C. Tenaga Penunjang'];
@@ -239,7 +242,7 @@ if (in_array($action, ['template','export'])) {
     foreach($items as $it) $grouped[$it['kategori']][]=$it;
     foreach($kategoriOrder as $kat){
         if(empty($grouped[$kat])) continue;
-        $sheet->mergeCells("A{$rowIdx}:G{$rowIdx}");
+        $sheet->mergeCells("A{$rowIdx}:H{$rowIdx}");
         $sheet->setCellValue("A{$rowIdx}", $kategoriLabel[$kat]);
         $catHeaderStyle=[
             'font'=>['bold'=>true,'color'=>['rgb'=>'000000']],
@@ -277,50 +280,51 @@ if (in_array($action, ['template','export'])) {
                 $noDisplay = (string)$numericNo;
                 $numericNo++;
             }
-            $sheet->setCellValue("A{$rowIdx}", $noDisplay);
-            $sheet->setCellValue("B{$rowIdx}", $displayName);
-            $sheet->setCellValue("C{$rowIdx}", (int)$d['asn_l']);
-            $sheet->setCellValue("D{$rowIdx}", (int)$d['asn_p']);
-            $sheet->setCellValue("E{$rowIdx}", (int)$d['nonasn_l']);
-            $sheet->setCellValue("F{$rowIdx}", (int)$d['nonasn_p']);
-            $sheet->setCellValue("G{$rowIdx}", (int)$d['jumlah']);
-            $sheet->getStyle("A{$rowIdx}:G{$rowIdx}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-            $sheet->getStyle("A{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("C{$rowIdx}:G{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("B{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->setCellValue("A{$rowIdx}", $faskes['kode_faskes'] ?? '');
+            $sheet->setCellValue("B{$rowIdx}", $noDisplay);
+            $sheet->setCellValue("C{$rowIdx}", $displayName);
+            $sheet->setCellValue("D{$rowIdx}", (int)$d['asn_l']);
+            $sheet->setCellValue("E{$rowIdx}", (int)$d['asn_p']);
+            $sheet->setCellValue("F{$rowIdx}", (int)$d['nonasn_l']);
+            $sheet->setCellValue("G{$rowIdx}", (int)$d['nonasn_p']);
+            $sheet->setCellValue("H{$rowIdx}", (int)$d['jumlah']);
+            $sheet->getStyle("A{$rowIdx}:H{$rowIdx}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->getStyle("A{$rowIdx}:B{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("D{$rowIdx}:H{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("C{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
             // sum only include_in_total for A to avoid double count
             $shouldInclude = true;
             if($kat==='Tenaga Kesehatan' && (int)$it['include_in_total']===0) $shouldInclude=false;
             if($shouldInclude) $catSum += (int)$d['jumlah'];
             $rowIdx++;
         }
-        $sheet->mergeCells("A{$rowIdx}:B{$rowIdx}");
+        $sheet->mergeCells("A{$rowIdx}:C{$rowIdx}");
         $sheet->setCellValue("A{$rowIdx}", "Total ".$kategoriLabel[$kat]);
-        $sheet->setCellValue("G{$rowIdx}", $catSum);
+        $sheet->setCellValue("H{$rowIdx}", $catSum);
         $totalStyle=[
             'font'=>['bold'=>true],
             'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>'DDEBF7']],
             'borders'=>['allBorders'=>['borderStyle'=>Border::BORDER_THIN,'color'=>['rgb'=>'000000']]]
         ];
-        $sheet->getStyle("A{$rowIdx}:G{$rowIdx}")->applyFromArray($totalStyle);
-        $sheet->getStyle("G{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("A{$rowIdx}:H{$rowIdx}")->applyFromArray($totalStyle);
+        $sheet->getStyle("H{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("A{$rowIdx}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $rowIdx++;
         $grandTotal+=$catSum;
     }
-    $sheet->mergeCells("A{$rowIdx}:F{$rowIdx}");
+    $sheet->mergeCells("A{$rowIdx}:G{$rowIdx}");
     $sheet->setCellValue("A{$rowIdx}", "TOTAL SDM KESEHATAN dan TENAGA PENUNJANG DI ".$labelJenis." ".strtoupper($faskes['nama_faskes'])." TAHUN ".date('Y'));
-    $sheet->setCellValue("G{$rowIdx}", $grandTotal);
+    $sheet->setCellValue("H{$rowIdx}", $grandTotal);
     $grandStyle=[
         'font'=>['bold'=>true,'color'=>['rgb'=>'FFFFFF']],
         'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>'4472C4']],
         'alignment'=>['horizontal'=>Alignment::HORIZONTAL_CENTER],
         'borders'=>['allBorders'=>['borderStyle'=>Border::BORDER_THIN,'color'=>['rgb'=>'000000']]]
     ];
-    $sheet->getStyle("A{$rowIdx}:G{$rowIdx}")->applyFromArray($grandStyle);
+    $sheet->getStyle("A{$rowIdx}:H{$rowIdx}")->applyFromArray($grandStyle);
     $sheet->getRowDimension($rowIdx)->setRowHeight(20);
     $sheet->freezePane('A5');
-    $sheet->setAutoFilter('A3:G4');
+    $sheet->setAutoFilter('A3:H4');
     $filename = ($action==='template' ? 'Template_SDMK_' : 'Export_SDMK_') . preg_replace('/[^A-Za-z0-9_]/','_', $faskes['nama_faskes']) . '_' . date('Ymd') . '.xlsx';
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="'.$filename.'"');
@@ -331,6 +335,18 @@ if (in_array($action, ['template','export'])) {
 }
 
 // ---------- HANDLE POST ACTIONS ----------
+// Redirect pasca-aksi item: kembali ke tab asal. Form dari tab Rekap
+// menyertakan return_to ter-whitelist; form Master tidak (perilaku lama).
+function item_redirect($msg){
+    $ret = $_POST['return_to'] ?? '';
+    if(is_string($ret) && preg_match('/^sdmk\.php\?tab=faskes&id_faskes=\d+$/', $ret)){
+        $map=['added'=>'item_added','updated'=>'item_updated','deleted'=>'item_deleted',
+              'exists'=>'item_exists','invalid'=>'item_invalid','error'=>'item_error'];
+        $m = $map[$msg] ?? $msg;
+        header("Location: $ret&msg=$m"); exit;
+    }
+    header("Location: sdmk.php?tab=items&msg=$msg"); exit;
+}
 $msg=''; $importResult=null; $saveResult=null;
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $act=$_POST['action'] ?? '';
@@ -517,50 +533,115 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $frow=$fchk->get_result()->fetch_assoc();
         if(!$frow){ header("Location: sdmk.php?msg=faskes_not_found"); exit; }
         $id_kecamatan=(int)$frow['id_kecamatan'];
+        // Peta faskes untuk mode multi-faskes: Kode (eksak + case-insensitif)
+        // dan Nama (normalisasi, dengan deteksi ambiguitas). id_kecamatan
+        // selalu di-derive dari tbl_faskes, TIDAK dari input/Excel.
+        $mapKode=[]; $mapNama=[];
+        $qfAll=$config->query("SELECT id_faskes, kode_faskes, nama_faskes, id_kecamatan FROM tbl_faskes WHERE aktif='Y'");
+        while($qfAll && ($fr=$qfAll->fetch_assoc())){
+            $fid=(int)$fr['id_faskes']; $fkec=(int)$fr['id_kecamatan'];
+            $code=trim((string)($fr['kode_faskes'] ?? ''));
+            if($code!==''){
+                if(!isset($mapKode[$code])) $mapKode[$code]=['id'=>$fid,'kec'=>$fkec];
+                $up=strtoupper($code);
+                if(!isset($mapKode[$up])) $mapKode[$up]=['id'=>$fid,'kec'=>$fkec];
+            }
+            $nm=normalizeNama($fr['nama_faskes'] ?? '');
+            if($nm!==''){
+                if(!isset($mapNama[$nm])) $mapNama[$nm]=['id'=>$fid,'kec'=>$fkec,'amb'=>false];
+                else $mapNama[$nm]['amb']=true;
+            }
+        }
         if(!isset($_FILES['excel_file']) || $_FILES['excel_file']['error']!==UPLOAD_ERR_OK){
             header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_no_file");
             exit;
         }
         $tmp=$_FILES['excel_file']['tmp_name'];
         $ext=strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
-        $success=0; $skipped=0; $warnings=[];
+        $success=0; $skipped=0; $failed=0; $warnings=[]; $affectedKec=[];
         try{
             if($ext==='xls') $reader=new ReaderXls(); else $reader=new ReaderXlsx();
             $reader->setReadDataOnly(true);
             $ss=$reader->load($tmp);
             $sheet=$ss->getActiveSheet();
             $rows=$sheet->toArray(null,true,true,true);
-            $headerRow=null;
+            // Helper indeks kolom (A=>0, ..., Z=>25, AA=>26, ...)
+            $colIdx=function($letter){ $letter=strtoupper($letter); $n=0; for($i=0;$i<strlen($letter);$i++){ $n=$n*26+(ord($letter[$i])-64); } return $n-1; };
+            $colLetter=function($idx){ $s=''; $idx++; while($idx>0){ $m=($idx-1)%26; $s=chr(65+$m).$s; $idx=intdiv($idx-1,26); } return $s; };
+            // Deteksi header: cari sel 'Jenis SDM' di kolom mana pun (kompatibel
+            // template lama A=No/B=Jenis maupun template baru A=Kode/B=No/C=Jenis).
+            // Kolom 'Kode Faskes' bersifat opsional -> penanda mode multi-faskes.
+            $headerRow=null; $idxJenis=null; $idxKode=null;
             foreach($rows as $rNum=>$row){
-                $b=trim((string)($row['B'] ?? ''));
-                if(strcasecmp($b,'Jenis SDM')===0){ $headerRow=(int)$rNum; break; }
+                foreach($row as $letter=>$val){
+                    $t=strtolower(trim((string)$val));
+                    if($t==='jenis sdm' && $headerRow===null){ $headerRow=(int)$rNum; $idxJenis=$colIdx($letter); }
+                    if($t==='kode faskes' && $idxKode===null){ $idxKode=$colIdx($letter); }
+                }
+                if($headerRow!==null && (int)$rNum>$headerRow+2) break;
             }
-            if($headerRow===null){
+            if($headerRow===null || $idxJenis===null){
                 if(session_status()===PHP_SESSION_NONE) session_start();
-                $_SESSION['import_result']=['success'=>0,'skipped'=>0,'warnings'=>["Header 'Jenis SDM' tidak ditemukan di kolom B. Pastikan file adalah Template/Export SDMK yang valid."]];
+                $_SESSION['import_result']=['success'=>0,'skipped'=>0,'failed'=>0,'rekap'=>[],'new_items'=>[],'similar'=>[],'checksum'=>[],'failed_rows'=>[],'warnings'=>["Header 'Jenis SDM' tidak ditemukan. Pastikan file adalah Template/Export SDMK yang valid."]];
                 header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_invalid_header");
                 exit;
             }
+            $cJ=$colLetter($idxJenis);
+            $v0=$idxJenis+1; $v1=$idxJenis+2; $v2=$idxJenis+3; $v3=$idxJenis+4;
+            $cV0=$colLetter($v0); $cV1=$colLetter($v1); $cV2=$colLetter($v2); $cV3=$colLetter($v3);
+            $isMulti = ($idxKode!==null);
+            // STEP 2 — VALIDASI TEMPLATE KETAT (tolak file buatan sendiri).
+            // Kanonis (dari tombol Download Template): Kode Faskes | No |
+            // Jenis SDM | ASN-L | ASN-P | Non ASN-L | Non ASN-P.
+            // Legacy yang masih diterima: No | Jenis SDM | ... (tanpa Kode,
+            // mode single-faskes). Selain itu -> tolak dengan pesan kolom.
+            $hdr1=$rows[$headerRow] ?? [];
+            $cellAt=function($idx) use ($hdr1,$colLetter){ $L=$colLetter($idx); return trim((string)($hdr1[$L] ?? '')); };
+            $reject=function($why) use ($config,$id_faskes){
+                if(session_status()===PHP_SESSION_NONE) session_start();
+                $_SESSION['import_result']=['success'=>0,'skipped'=>0,'failed'=>0,'rekap'=>[],'new_items'=>[],'similar'=>[],'checksum'=>[],'failed_rows'=>[],'warnings'=>[$why]];
+                header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_invalid_header");
+                exit;
+            };
+            $preKode = $idxJenis>=2 ? $cellAt($idxJenis-2) : '';
+            $preNo = $idxJenis>=1 ? $cellAt($idxJenis-1) : '';
+            $layoutOk = false; $layoutName = '';
+            if(strcasecmp($preKode,'Kode Faskes')===0 && strcasecmp($preNo,'No')===0){
+                $layoutOk = true; $layoutName = 'kanonis';
+            } elseif($idxJenis===1 && strcasecmp($preNo,'No')===0){
+                $layoutOk = true; $layoutName = 'legacy';
+            }
+            if(!$layoutOk){
+                $reject("Struktur header tidak sesuai template baris $headerRow: sebelum 'Jenis SDM' harus 'No' (legacy) atau 'Kode Faskes | No' (kanonis). Ditemukan: '".($preKode!==''?$preKode.' | ':'').$preNo."'. Download ulang template via tombol Download Template.");
+            }
+            if($isMulti && $layoutName!=='kanonis'){
+                $reject("Kolom 'Kode Faskes' tidak pada posisi yang benar (harus 2 kolom sebelum 'Jenis SDM'). Download ulang template via tombol Download Template.");
+            }
+            // Grup nilai: sel (headerRow, v0) harus memuat 'ASN', sel
+            // (headerRow, v2) harus memuat 'Non ASN'.
+            $g1=$cellAt($v0); $g2=$cellAt($v2);
+            $asnOk = stripos($g1,'ASN')!==false && stripos($g2,'Non ASN')!==false;
+            if(!$asnOk){
+                $reject("Struktur header tidak valid baris $headerRow: 4 kolom setelah 'Jenis SDM' harus dikelompokkan 'ASN' dan 'Non ASN' (ditemukan '$g1' dan '$g2'). Download ulang template via tombol Download Template.");
+            }
+            // Sub-header L/P/L/P di baris berikutnya, tepat di 4 kolom nilai.
             $hdr2=$rows[$headerRow+1] ?? null;
             if($hdr2){
-                $c=trim((string)($hdr2['C'] ?? '')); $d=trim((string)($hdr2['D'] ?? ''));
-                $e=trim((string)($hdr2['E'] ?? '')); $f=trim((string)($hdr2['F'] ?? ''));
-                $expected=['L','P','L','P'];
-                $actual=[$c,$d,$e,$f];
-                $actualUp=array_map(fn($x)=>strtoupper(trim($x)), $actual);
-                if($actualUp !== $expected){
-                    $hdr1=$rows[$headerRow] ?? null;
-                    $c1=trim((string)($hdr1['C'] ?? '')); $e1=trim((string)($hdr1['E'] ?? ''));
-                    $asnOk = strcasecmp($c1,'ASN')===0 && strcasecmp($e1,'Non ASN')===0;
-                    if(!$asnOk && $actualUp !== $expected){
-                        if(session_status()===PHP_SESSION_NONE) session_start();
-                        $_SESSION['import_result']=['success'=>0,'skipped'=>0,'warnings'=>["Struktur header tidak valid di baris ".($headerRow+1).": kolom C-F harus 'L','P','L','P' (ditemukan '".implode("','",$actual)."'). File mungkin bukan template SDMK."]];
-                        header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_invalid_header");
-                        exit;
-                    }
+                $actual=[$cV0,$cV1,$cV2,$cV3];
+                $actual=array_map(fn($L)=>trim((string)($hdr2[$L] ?? '')), $actual);
+                $actualUp=array_map(fn($x)=>strtoupper($x), $actual);
+                if($actualUp !== ['L','P','L','P']){
+                    $reject("Struktur header tidak valid di baris ".($headerRow+1).": 4 kolom nilai harus 'L','P','L','P' (ditemukan '".implode("','",$actual)."'). Download ulang template via tombol Download Template.");
                 }
+            } else {
+                $reject("Baris sub-header L/P/L/P (baris ".($headerRow+1).") tidak ditemukan. File mungkin corrupt atau bukan template SDMK.");
             }
             $dataStart=$headerRow+2;
+            // File tidak kosong: harus ada minimal 1 baris data.
+            $maxDataRow=(int)$sheet->getHighestDataRow();
+            if($maxDataRow < $dataStart){
+                $reject("File tidak berisi baris data (hanya header). Upload file Template/Export SDMK yang sudah diisi.");
+            }
             $items=getItems($config);
             // map by normalized nama + kategori
             $map=[];
@@ -571,43 +652,128 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 // also store fallback by just name for legacy single-match (but we will prefer kategori-aware)
             }
             $config->begin_transaction();
+            // STEP 3 — state machine parsing hierarkis:
+            // $kategori_aktif = kategori seksi berjalan; $last_parent_id = id
+            // ITEM UTAMA terakhir (untuk SUB-ITEM); $checksum = akumulasi
+            // nilai per kategori untuk validasi baris "Total".
+            $kategori_aktif = null;
+            $last_parent_id = null;
+            $checksum = [];
+            $newItems = [];
+            // STEP 6 — struktur laporan terstruktur (selain string warnings).
+            $repSimilar = [];
+            $repChecksum = [];
+            $repFailed = [];
+            // Helper baris gagal: catat terstruktur + string + counter.
+            $failRow = function($rNum, $jenisText, $reason) use (&$warnings, &$repFailed, &$failed) {
+                $warnings[] = "Baris $rNum: $reason";
+                $repFailed[] = ['row' => $rNum, 'jenis' => $jenisText, 'reason' => $reason];
+                $failed++;
+            };
+            // STEP 4 — data bantu auto-insert master:
+            // urutan berikutnya + daftar nama existing (untuk similarity).
+            $maxUrut = 0;
+            $qUrut = $config->query("SELECT MAX(urutan) m FROM tbl_sdm_items");
+            if($qUrut && ($rU=$qUrut->fetch_assoc())) $maxUrut=(int)$rU['m'];
+            $existingNames = []; $itemNames = [];
+            $qNm = $config->query("SELECT id, nama_item FROM tbl_sdm_items WHERE aktif='Y'");
+            while($qNm && ($rN=$qNm->fetch_assoc())){ $existingNames[]=$rN['nama_item']; $itemNames[(int)$rN['id']]=$rN['nama_item']; }
+            // Deteksi baris kategori dari teks (tanpa posisi tetap).
+            $detectKategori = function($teks){
+                $t = strtolower(trim((string)$teks));
+                if(strpos($t,'asisten tenaga')!==false) return 'Asisten Tenaga Kesehatan';
+                if(strpos($t,'tenaga penunjang')!==false) return 'Tenaga Penunjang';
+                if(strpos($t,'tenaga kesehatan')!==false) return 'Tenaga Kesehatan';
+                return null;
+            };
             $currentKategori = null;
+            $cKode = $idxKode!==null ? $colLetter($idxKode) : null;
+            $cNo = $idxJenis>0 ? $colLetter($idxJenis-1) : null;
             foreach($rows as $rNum=>$row){
                 if((int)$rNum < $dataStart) continue;
-                $colB = trim((string)($row['B'] ?? ''));
-                $colA = trim((string)($row['A'] ?? ''));
-                if($colB==='') continue;
-                $lowerB=strtolower($colB);
-                // detect kategori header rows: "A. Tenaga Kesehatan" etc
-                if(strpos($lowerB,'tenaga kesehatan')!==false && strpos($lowerB,'asisten')===false){
-                    // distinguish A vs C? A contains "tenaga kesehatan" without asisten/penunjang
-                    if(strpos($lowerB,'penunjang')===false){
-                        // could be A header
-                        if(strpos($lowerB,'a.')!==false || $lowerB==='a. tenaga kesehatan' || strpos($lowerB,'a. tenaga kesehatan')!==false){
-                            $currentKategori='Tenaga Kesehatan';
-                        } else if($colA==='' && strpos($lowerB,'tenaga kesehatan')!==false){
-                            // header row merged
-                            $currentKategori='Tenaga Kesehatan';
+                $colB = trim((string)($row[$cJ] ?? ''));
+                $colA = $cNo!==null ? trim((string)($row[$cNo] ?? '')) : '';
+                if($colB==='' && $colA==='') continue;
+                // Baris merged dari template: teks penanda ada di kolom No,
+                // sel Jenis kosong. Deteksi memakai sel yang terisi.
+                $textDetect = $colB!=='' ? $colB : $colA;
+                $markerInNo = ($colB==='');
+                // Nilai mentah 4 kolom angka (untuk deteksi baris-berangka & checksum).
+                $rawVals = [trim((string)($row[$cV0] ?? '')), trim((string)($row[$cV1] ?? '')),
+                            trim((string)($row[$cV2] ?? '')), trim((string)($row[$cV3] ?? ''))];
+                $rowHasNums = false;
+                foreach($rawVals as $rv){ if($rv!==''){ $rowHasNums=true; break; } }
+
+                // --- STEP 3a: baris TOTAL (salah satu sel No/Jenis kosong +
+                // teks memuat 'total') ---
+                // Bukan data: validasi checksum vs akumulasi kategori berjalan.
+                if(($colA==='' || $colB==='') && stripos($textDetect,'total')!==false){
+                    if($kategori_aktif!==null && isset($checksum[$kategori_aktif])){
+                        $pv=[]; $badParse=false;
+                        foreach($rawVals as $vv){
+                            $t=$vv===''?'0':str_replace(',','',$vv);
+                            if(!is_numeric($t)){ $badParse=true; break; }
+                            $pv[]=(int)$t;
                         }
+                        if(!$badParse){
+                            $acc=$checksum[$kategori_aktif];
+                            $lbl=['ASN-L','ASN-P','NonASN-L','NonASN-P'];
+                            $mm=[];
+                            foreach(['al','ap','nl','np'] as $ii=>$kk){
+                                if($pv[$ii]!==$acc[$kk]) $mm[]=$lbl[$ii]." file={$pv[$ii]} vs hitung={$acc[$kk]}";
+                            }
+                            if(!empty($mm)){
+                                $warnings[]="Baris $rNum (Total $kategori_aktif): checksum tidak cocok (".implode(', ',$mm).") — data tetap diproses.";
+                                $repChecksum[]=['kategori'=>$kategori_aktif,'file'=>$pv,
+                                    'sys'=>[$acc['al'],$acc['ap'],$acc['nl'],$acc['np']]];
+                            }
+                        }
+                    } else {
+                        $warnings[]="Baris $rNum (Total): tidak bisa divalidasi checksum (di luar seksi kategori) — dilewati.";
                     }
-                    if(strpos($lowerB,'asisten tenaga')!==false) $currentKategori='Asisten Tenaga Kesehatan';
-                    elseif(strpos($lowerB,'tenaga penunjang')!==false) $currentKategori='Tenaga Penunjang';
                     $skipped++; continue;
                 }
-                if(strpos($lowerB,'asisten tenaga')!==false) { $currentKategori='Asisten Tenaga Kesehatan'; $skipped++; continue; }
-                if(strpos($lowerB,'tenaga penunjang')!==false) { $currentKategori='Tenaga Penunjang'; $skipped++; continue; }
-                if(strpos($lowerB,'total')!==false) { $skipped++; continue; }
-                // For rows with empty No. (header kategori) already handled. Also total rows have "Total"
-                // Now match
-                $norm = normalizeNama($colB);
-                // try kategori-aware match first
-                $keyCat = $norm . '|' . strtolower($currentKategori ?? '');
-                $pid = null;
-                if($currentKategori && isset($map[$keyCat])){
-                    $pid=$map[$keyCat];
+
+                // --- STEP 3b: baris kategori (teks di sel mana pun yang terisi,
+                // sel pasangannya kosong) ---
+                $katFound = null;
+                if($colA==='' || $colB==='') $katFound = $detectKategori($textDetect);
+                $effKategori = $kategori_aktif; $effParent = null; $effName = $colB!=='' ? $colB : $textDetect;
+                $isKategoriDataRow = false;
+                if($katFound!==null){
+                    if($rowHasNums){
+                        // Kategori berangka SEKALIGUS 1 item data (tanpa parent).
+                        $effKategori=$katFound; $kategori_aktif=$katFound;
+                        $isKategoriDataRow=true;
+                    } else {
+                        // Header seksi murni: ganti konteks, reset rantai parent.
+                        $kategori_aktif=$katFound; $last_parent_id=null;
+                        $skipped++; continue;
+                    }
                 } else {
-                    // fallback: find any with same normalized name regardless of kategori (for unique names)
-                    // collect candidates
+                    // --- STEP 3c: baris item ---
+                    $noLetter = rtrim($colA,'.');
+                    if(preg_match('/^[a-zA-Z]$/',$noLetter)){
+                        // SUB-ITEM: wajib ada item utama sebelumnya.
+                        if($last_parent_id===null){
+                            $failRow($rNum, $textDetect, "baris sub-item ditemukan tanpa item utama sebelumnya, No baris di Excel: '$colA'");
+                            continue;
+                        }
+                        $effParent=$last_parent_id;
+                    }
+                    // else: ITEM UTAMA (effParent null).
+                }
+
+                // --- STEP 4: MATCHING & AUTO-INSERT ke tbl_sdm_items ---
+                // Aturan: (nama, kategori); id_spesialis TIDAK dipakai (Opsi A).
+                $effNameTrim = trim($effName);
+                $norm = normalizeNama($effNameTrim);
+                $katKey = $effKategori!==null ? strtolower($effKategori) : '';
+                $pid = null;
+                if($effKategori!==null && isset($map[$norm.'|'.$katKey])){
+                    $pid=$map[$norm.'|'.$katKey];
+                } else {
+                    // fallback: nama unik lintas kategori (toleransi file lama).
                     $candidates=[];
                     foreach($map as $k=>$v){
                         $parts=explode('|',$k);
@@ -615,15 +781,40 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                     if(count($candidates)===1) $pid=$candidates[0];
                     elseif(count($candidates)>1){
-                        // ambiguous (Gizi, Terapis Gigi) without kategori context => warning skip
-                        $warnings[]="Baris $rNum: Jenis SDM '".htmlspecialchars($colB)."' ambigu (muncul di 2 kategori), butuh konteks kategori — di-skip. Pastikan file memiliki header kategori A/B/C.";
-                        $skipped++; continue;
+                        $failRow($rNum, $effNameTrim, "Jenis SDM ambigu (muncul di 2 kategori), butuh konteks kategori. Pastikan file memiliki header kategori A/B/C.");
+                        continue;
                     }
                 }
                 if($pid===null){
-                    $warnings[]="Baris $rNum: Jenis SDM '".htmlspecialchars($colB)."' tidak ditemukan di master (normalisasi: '$norm', kategori: '".($currentKategori??'-')."'), di-skip.";
-                    $skipped++;
-                    continue;
+                    // TIDAK COCOK -> INSERT OTOMATIS tanpa approval.
+                    $insKat = $effKategori ?? 'Tenaga Kesehatan';
+                    if($effKategori===null){
+                        $warnings[]="Baris $rNum: kategori tidak diketahui (tanpa header kategori), dipakai default 'Tenaga Kesehatan' untuk '".htmlspecialchars($effNameTrim). "'.";
+                    }
+                    // Cek kemiripan (peringatan saja, tetap insert).
+                    $bestName=''; $bestPct=0;
+                    foreach($existingNames as $en){
+                        similar_text(strtolower($effNameTrim), strtolower($en), $pct);
+                        if($pct>$bestPct){ $bestPct=$pct; $bestName=$en; }
+                    }
+                    if($bestPct>=75){
+                        $warnings[]="Baris $rNum: '".htmlspecialchars($effNameTrim)."' mirip dengan existing '".htmlspecialchars($bestName)."' (".round($bestPct)."%) — tetap ditambahkan sebagai item baru, cek manual.";
+                        $repSimilar[]=['file'=>$effNameTrim,'existing'=>$bestName,'score'=>round($bestPct)];
+                    }
+                    $maxUrut++;
+                    $incTotal = $effParent===null ? 1 : 0;
+                    $ins=$config->prepare("INSERT INTO tbl_sdm_items (nama_item, kategori, parent_id, id_parent, urutan, is_total_row, include_in_total, aktif) VALUES (?,?,?,?,?,0,?,'Y')");
+                    $ins->bind_param("ssiiii",$effNameTrim,$insKat,$effParent,$effParent,$maxUrut,$incTotal);
+                    if(!$ins->execute()){
+                        $failRow($rNum, $effNameTrim, "gagal menambah master: ".$ins->error);
+                        continue;
+                    }
+                    $pid=$ins->insert_id;
+                    $map[$norm.'|'.strtolower($insKat)]=$pid;
+                    $existingNames[]=$effNameTrim;
+                    $itemNames[$pid]=$effNameTrim;
+                    $newItems[]=['nama'=>$effNameTrim,'kategori'=>$insKat,'urutan'=>$maxUrut,
+                        'parent'=>($effParent!==null && isset($itemNames[$effParent]) ? $itemNames[$effParent] : '-')];
                 }
                 // validate is_total_row not allowed
                 $chkItem=$config->prepare("SELECT is_total_row FROM tbl_sdm_items WHERE id=? LIMIT 1");
@@ -633,7 +824,33 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($itRow && (int)$itRow['is_total_row']===1){
                     $skipped++; continue;
                 }
-                $c = $row['C'] ?? 0; $d=$row['D'] ?? 0; $e=$row['E'] ?? 0; $f=$row['F'] ?? 0;
+                // Resolusi faskes per baris (mode multi): Kode eksak ->
+                // Nama ternormalisasi. Tanpa tebak/fuzzy kecamatan dan tanpa
+                // auto-create faskes. Baris tanpa kode memakai faskes UI.
+                // id_kecamatan selalu di-derive dari tbl_faskes.
+                $rf=$id_faskes; $rk=$id_kecamatan;
+                if($isMulti){
+                    $kodeCell=trim((string)($row[$cKode] ?? ''));
+                    if($kodeCell!==''){
+                        $hit=null;
+                        if(isset($mapKode[$kodeCell])) $hit=$mapKode[$kodeCell];
+                        elseif(isset($mapKode[strtoupper($kodeCell)])) $hit=$mapKode[strtoupper($kodeCell)];
+                        else {
+                            $nmN=normalizeNama($kodeCell);
+                            if(isset($mapNama[$nmN]) && !$mapNama[$nmN]['amb']) $hit=$mapNama[$nmN];
+                            elseif(isset($mapNama[$nmN]) && $mapNama[$nmN]['amb']){
+                                $failRow($rNum, $kodeCell, "nama faskes cocok dengan lebih dari satu faskes. Gunakan Kode Faskes yang eksak.");
+                                continue;
+                            }
+                        }
+                        if($hit===null){
+                            $failRow($rNum, $kodeCell, "faskes tidak ditemukan di database (faskes baru wajib diinput via Kelola Fasyankes).");
+                            continue;
+                        }
+                        $rf=$hit['id']; $rk=$hit['kec'];
+                    }
+                }
+                $c = $row[$cV0] ?? 0; $d=$row[$cV1] ?? 0; $e=$row[$cV2] ?? 0; $f=$row[$cV3] ?? 0;
                 $vals=[$c,$d,$e,$f]; $parsed=[];
                 foreach($vals as $idx=>$v){
                     $orig=(string)$v;
@@ -641,39 +858,59 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     if($v==='') $v=0;
                     $v=str_replace(',','',$v);
                     if(!is_numeric($v) || (int)$v<0){
-                        $warnings[]="Baris $rNum (".htmlspecialchars($colB)."): nilai '".htmlspecialchars($orig)."' pada kolom ".chr(67+$idx)." tidak valid (harus angka ≥0), dianggap 0.";
+                        $warnings[]="Baris $rNum (".htmlspecialchars($effName)."): nilai '".htmlspecialchars($orig)."' pada kolom ".chr(67+$idx)." tidak valid (harus angka ≥0), dianggap 0.";
                         $v=0;
                     }
                     $parsed[]=(int)$v;
                 }
                 [$al,$ap,$nl,$np]=$parsed;
+                $ckKat = $effKategori ?? $kategori_aktif ?? 'Tanpa Kategori';
                 $chk=$config->prepare("SELECT id FROM tbl_sdm_faskes WHERE id_faskes=? AND id_profesi=? AND id_spesialis IS NULL LIMIT 1");
-                $chk->bind_param("ii",$id_faskes,$pid);
+                $chk->bind_param("ii",$rf,$pid);
                 $chk->execute();
                 $ex=$chk->get_result()->fetch_assoc();
                 if($ex){
                     $stmt=$config->prepare("UPDATE tbl_sdm_faskes SET asn_l=?, asn_p=?, nonasn_l=?, nonasn_p=?, id_kecamatan=?, aktif='Y', updated_at=NOW() WHERE id=?");
-                    $stmt->bind_param("iiiiii",$al,$ap,$nl,$np,$id_kecamatan,$ex['id']);
+                    $stmt->bind_param("iiiiii",$al,$ap,$nl,$np,$rk,$ex['id']);
                     $ok=$stmt->execute();
-                    if(!$ok){ $warnings[]="Baris $rNum (".htmlspecialchars($colB)."): gagal update DB: ".$stmt->error; }
-                    else { $success++; }
+                    if(!$ok){ $failRow($rNum, $effName, "gagal update DB: ".$stmt->error); }
+                    else { $success++; $affectedKec[$rk]=true; $rowSaved=true; }
                 } else {
                     $stmt=$config->prepare("INSERT INTO tbl_sdm_faskes (id_kecamatan, id_faskes, id_profesi, id_spesialis, asn_l, asn_p, nonasn_l, nonasn_p, aktif) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, 'Y')");
-                    $stmt->bind_param("iiiiiii",$id_kecamatan,$id_faskes,$pid,$al,$ap,$nl,$np);
+                    $stmt->bind_param("iiiiiii",$rk,$rf,$pid,$al,$ap,$nl,$np);
                     $ok=$stmt->execute();
-                    if(!$ok){ $warnings[]="Baris $rNum (".htmlspecialchars($colB)."): gagal insert DB: ".$stmt->error; }
-                    else { $success++; }
+                    if(!$ok){ $failRow($rNum, $effName, "gagal insert DB: ".$stmt->error); }
+                    else { $success++; $affectedKec[$rk]=true; $rowSaved=true; }
+                }
+                if(!empty($rowSaved)){
+                    // Akumulasi checksum per kategori + rantai parent.
+                    // Sub-item tidak mengubah last_parent_id (sibling menempel
+                    // ke induk yang sama); item utama/kategori-data menjadi
+                    // induk berikutnya.
+                    if(!isset($checksum[$ckKat])) $checksum[$ckKat]=['al'=>0,'ap'=>0,'nl'=>0,'np'=>0];
+                    $checksum[$ckKat]['al']+=$al; $checksum[$ckKat]['ap']+=$ap;
+                    $checksum[$ckKat]['nl']+=$nl; $checksum[$ckKat]['np']+=$np;
+                    if($effParent===null) $last_parent_id=$pid;
+                    $rowSaved=false;
                 }
             }
             $config->commit();
+            // Rekap agregasi otomatis per kecamatan (1 sumber kebenaran:
+            // id_kecamatan hasil derive dari tbl_faskes saat import).
+            $rekap=[];
+            if(!empty($affectedKec)){
+                $ids=implode(',',array_map('intval',array_keys($affectedKec)));
+                $qR=$config->query("SELECT k.nama_kecamatan, COALESCE(SUM(sf.jumlah),0) AS total FROM tbl_kecamatan k LEFT JOIN tbl_sdm_faskes sf ON sf.id_kecamatan=k.id_kecamatan AND sf.aktif='Y' WHERE k.id_kecamatan IN ($ids) GROUP BY k.id_kecamatan, k.nama_kecamatan ORDER BY k.nama_kecamatan");
+                while($qR && ($rr=$qR->fetch_assoc())) $rekap[]=$rr;
+            }
             if(session_status()===PHP_SESSION_NONE) session_start();
-            $_SESSION['import_result']=['success'=>$success,'skipped'=>$skipped,'warnings'=>$warnings];
+            $_SESSION['import_result']=['success'=>$success,'skipped'=>$skipped,'failed'=>$failed,'warnings'=>$warnings,'rekap'=>$rekap,'multi'=>$isMulti,'new_items'=>$newItems,'similar'=>$repSimilar,'checksum'=>$repChecksum,'failed_rows'=>$repFailed];
             header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_done");
             exit;
         } catch(Exception $e){
             $config->rollback();
             if(session_status()===PHP_SESSION_NONE) session_start();
-            $_SESSION['import_result']=['success'=>0,'skipped'=>0,'warnings'=>["Fatal error: ".$e->getMessage()]];
+            $_SESSION['import_result']=['success'=>0,'skipped'=>0,'failed'=>0,'rekap'=>[],'new_items'=>[],'similar'=>[],'checksum'=>[],'failed_rows'=>[],'warnings'=>["Fatal error: ".$e->getMessage()]];
             header("Location: sdmk.php?id_faskes=$id_faskes&msg=import_error");
             exit;
         }
@@ -687,6 +924,25 @@ while ($r = $q->fetch_assoc()) $allItems[] = $r;
 $parents = array_filter($allItems, fn($x)=> $x['aktif']==='Y' && (int)$x['is_total_row']===0);
 $parentMap = [];
 foreach ($allItems as $it) $parentMap[$it['id']] = $it['nama_item'];
+// Peta untuk warning CRUD dari tab Rekap: jumlah faskes berisi angka>0
+// per item + jumlah sub-item aktif per item (tidak mengubah data).
+$itemFaskesCount = [];
+$qFC = $config->query("SELECT id_profesi, COUNT(*) c FROM (SELECT id_profesi, id_faskes FROM tbl_sdm_faskes WHERE aktif='Y' GROUP BY id_profesi, id_faskes HAVING SUM(jumlah)>0) t GROUP BY id_profesi");
+while ($qFC && ($rF = $qFC->fetch_assoc())) $itemFaskesCount[(int)$rF['id_profesi']] = (int)$rF['c'];
+$itemChildCount = [];
+$qCh = $config->query("SELECT parent_id, COUNT(*) c FROM tbl_sdm_items WHERE aktif='Y' AND parent_id IS NOT NULL GROUP BY parent_id");
+while ($qCh && ($rC = $qCh->fetch_assoc())) $itemChildCount[(int)$rC['parent_id']] = (int)$rC['c'];
+// ENHANCEMENT UX — referensi nama sub-spesialis dokter (READ-ONLY).
+// tbl_spesialis HANYA dibaca sebagai pilihan cepat pengisian field Nama;
+// penyimpanan tetap via parent_id di tbl_sdm_items (id_spesialis TIDAK
+// dipakai). Baris 'Dokter Umum' dikecualikan: itu item top-level, bukan
+// sub-spesialis (format "Dokter Spesialis Dokter Umum (Umum)" tidak masuk akal).
+$spesialisRef = [];
+$qRef = $config->query("SELECT nama_spesialis, kode FROM tbl_spesialis WHERE aktif='Y' ORDER BY urutan, nama_spesialis");
+while ($qRef && ($rR = $qRef->fetch_assoc())) {
+    if (strtolower(trim($rR['nama_spesialis'])) === 'dokter umum') continue;
+    $spesialisRef[] = ['nama' => $rR['nama_spesialis'], 'kode' => trim((string)($rR['kode'] ?? ''))];
+}
 
 // ---------- DISPLAY DATA (FASKES) ----------
 $faskesList=getFaskesList($config);
@@ -767,7 +1023,12 @@ $username=$_SESSION['admin_username'] ?? 'Admin';
 .alert-error{background:rgba(255,82,82,0.12);border:1px solid rgba(255,82,82,0.2);color:#ff8a80}
 .sdmk-wrap{overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)}
 #rekapTable{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;table-layout:fixed}
-#rekapTable col.col-no{width:52px} #rekapTable col.col-jenis{width:auto} #rekapTable col.col-num{width:74px} #rekapTable col.col-jml{width:78px} #rekapTable col.col-aksi{width:92px}
+#rekapTable col.col-no{width:52px} #rekapTable col.col-jenis{width:auto} #rekapTable col.col-num{width:74px} #rekapTable col.col-jml{width:78px} #rekapTable col.col-aksi{width:150px}
+table.master-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0}
+table.master-table th{padding:10px 10px;color:#87e3ff;font-weight:700;font-size:12px;letter-spacing:.3px;background:#0b223c;border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:2;text-align:left}
+table.master-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;vertical-align:middle}
+table.master-table tbody tr:hover{background:rgba(0,212,255,0.06)}
+.master-wrap{max-height:60vh}
 #rekapTable th{padding:10px 8px;color:#87e3ff;font-weight:700;font-size:12px;letter-spacing:.3px;background:#0b223c;border-bottom:1px solid rgba(255,255,255,0.08);position:sticky;top:0;z-index:2}
 #rekapTable th small{font-weight:500;opacity:.8}
 #rekapTable td{padding:8px 8px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;vertical-align:middle}
@@ -788,7 +1049,6 @@ $username=$_SESSION['admin_username'] ?? 'Admin';
 .grand-row td{padding:12px 10px}
 .child-row td:nth-child(2){border-left:3px solid rgba(255,213,79,.35);background:rgba(255,213,79,.04)}
 .th-center{text-align:center}
-.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
 #editModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:999;justify-content:center;align-items:center}
 .modal-box{background:#0b223c;padding:30px;border-radius:20px;max-width:600px;width:95%;border:1px solid rgba(255,255,255,0.1);max-height:90vh;overflow-y:auto}
 .tab-nav{display:flex;gap:12px;margin-bottom:24px}
@@ -830,14 +1090,16 @@ $username=$_SESSION['admin_username'] ?? 'Admin';
 <?php endif; ?>
 <?php endif; ?>
 <div class="card" style="background:linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,136,204,0.06));border:1px solid rgba(0,212,255,0.2)"><h3><i class="fas fa-plus-circle" style="color:#00d4ff"></i> Tambah Jenis SDM</h3>
-<form method="POST"><input type="hidden" name="action" value="add_item"><div class="form-grid">
-<div class="form-group"><label>Nama Jenis SDM *</label><input type="text" name="nama_item" placeholder="Contoh: Apoteker" required></div>
+<form method="POST" onsubmit="return fillNamaFromPick('fSpesialis','fNama')"><input type="hidden" name="action" value="add_item"><div class="form-grid">
+<div class="form-group"><label>Nama Jenis SDM *</label><input type="text" name="nama_item" id="fNama" placeholder="Contoh: Apoteker" required></div>
 <div class="form-group"><label>Kategori *</label><select name="kategori" required><option value="Tenaga Kesehatan">A. Tenaga Kesehatan</option><option value="Asisten Tenaga Kesehatan">B. Asisten Tenaga Kesehatan</option><option value="Tenaga Penunjang">C. Tenaga Penunjang</option></select></div>
-<div class="form-group"><label>Parent (untuk sub-item)</label><select name="id_parent"><option value="">-- Tanpa Parent (top-level) --</option><?php foreach($parents as $p):?><option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nama_item']) ?> (<?= htmlspecialchars($p['kategori']) ?>)</option><?php endforeach;?></select></div>
+<div class="form-group"><label>Parent (untuk sub-item)</label><select name="id_parent" id="fParent" onchange="syncSpesialisRef('fParent','fSpesialisWrap','fNama')"><option value="">-- Tanpa Parent (top-level) --</option><?php foreach($parents as $p):?><option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nama_item']) ?> (<?= htmlspecialchars($p['kategori']) ?>)</option><?php endforeach;?></select></div>
+<div class="form-group" id="fSpesialisWrap" style="display:none"><label>Pilih cepat sub-spesialis <span style="font-weight:400;color:rgba(255,255,255,0.5)">(opsional — mengisi Nama otomatis, tetap bisa diedit)</span></label><select id="fSpesialis" onchange="pickSpesialis('fSpesialis','fNama')"><option value="">-- Pilih sub-spesialis --</option><?php foreach($spesialisRef as $sp):?><option value="Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?>">Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Urutan</label><input type="number" name="urutan" value="<?= count($allItems)+1 ?>" min="0"></div>
 </div><div style="margin-top:16px"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah</button></div></form></div>
 <div class="card"><h3><i class="fas fa-table" style="color:#00d4ff"></i> Daftar Jenis SDM (<?= count($allItems) ?>)</h3>
-<table><thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Parent</th><th>Urutan</th><th>Include</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>
+<div class="sdmk-wrap master-wrap">
+<table class="master-table"><thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Parent</th><th>Urutan</th><th>Include</th><th>Aktif</th><th>Aksi</th></tr></thead><tbody>
 <?php foreach($allItems as $idx=>$row):
 $katClass = $row['kategori']==='Tenaga Kesehatan'?'badge-A':($row['kategori']==='Asisten Tenaga Kesehatan'?'badge-B':'badge-C');
 $letter = $row['kategori']==='Tenaga Kesehatan'?'A':($row['kategori']==='Asisten Tenaga Kesehatan'?'B':'C');
@@ -857,7 +1119,7 @@ $incLabel = (int)$row['include_in_total']===1 ? '<span style="color:#81c784">YA<
 </td>
 </tr>
 <?php endforeach; ?>
-</tbody></table></div>
+</tbody></table></div></div>
 </div>
 <div id="tab-faskes" style="display:<?= $tab==='faskes'?'block':'none' ?>">
 <?php if($flash==='saved'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Data berhasil disimpan. Total tersimpan sesuai hitung JS &amp; kolom generated.</div>
@@ -871,6 +1133,12 @@ $incLabel = (int)$row['include_in_total']===1 ? '<span style="color:#81c784">YA<
 <?php elseif($flash==='import_no_file'):?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> File tidak ditemukan.</div>
 <?php elseif($flash==='import_error'):?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Gagal import, transaksi dibatalkan.</div>
 <?php elseif($flash==='error'):?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Gagal menyimpan — cek detail.</div>
+<?php elseif($flash==='item_added'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Jenis SDM berhasil ditambahkan — baris baru tampil di bawah dengan nilai 0, siap diisi.</div>
+<?php elseif($flash==='item_updated'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Jenis SDM berhasil diperbarui.</div>
+<?php elseif($flash==='item_deleted'):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Jenis SDM dinonaktifkan (soft delete).</div>
+<?php elseif($flash==='item_exists'):?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Nama item sudah ada (duplikat nama+kategori).</div>
+<?php elseif($flash==='item_invalid'):?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Input jenis SDM tidak valid.</div>
+<?php elseif($flash==='item_error'):?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Gagal memproses jenis SDM — cek log.</div>
 <?php endif; ?>
 <?php if($saveResult):?>
 <div class="card" style="border-color:rgba(255,193,7,0.25)"><h3><i class="fas fa-exclamation-triangle" style="color:#ffd54f"></i> Hasil Simpan Manual</h3>
@@ -879,7 +1147,47 @@ $incLabel = (int)$row['include_in_total']===1 ? '<span style="color:#81c784">YA<
 <?php endif;?>
 <?php if($importResult):?>
 <div class="card" style="border-color:rgba(0,212,255,0.25)"><h3><i class="fas fa-file-excel" style="color:#4CAF50"></i> Hasil Import</h3>
-<p>Berhasil disimpan: <strong><?= (int)$importResult['success'] ?></strong> baris | Di-skip: <strong><?= (int)$importResult['skipped'] ?></strong></p>
+<p style="font-size:15px">Berhasil: <strong style="color:#81c784"><?= (int)$importResult['success'] ?></strong> baris &nbsp;|&nbsp; Dilewati: <strong><?= (int)$importResult['skipped'] ?></strong> baris &nbsp;|&nbsp; Gagal: <strong style="color:<?= ((int)($importResult['failed'] ?? 0))>0 ? '#ff8a80' : '#81c784' ?>"><?= (int)($importResult['failed'] ?? 0) ?></strong> baris<?php if(!empty($importResult['multi'])): ?> &nbsp;|&nbsp; <em>Mode multi-faskes (kolom Kode Faskes)</em><?php endif; ?></p>
+<?php $ni = $importResult['new_items'] ?? []; ?>
+<h4 style="margin:14px 0 8px;font-size:14px;color:#84e7ff">Item baru otomatis ditambahkan ke master (<?= count($ni) ?>)</h4>
+<?php if(empty($ni)): ?><p style="font-size:13px;color:rgba(255,255,255,0.5)">Tidak ada item baru.</p>
+<?php else: ?><details open style="font-size:13px"><summary style="cursor:pointer;color:#87e3ff">Tampilkan daftar</summary><div style="max-height:220px;overflow:auto;margin-top:8px">
+<table style="width:100%;border-collapse:collapse;font-size:12px">
+<tr><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Nama item</th><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Kategori</th><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Parent</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Urutan</th></tr>
+<?php foreach($ni as $it): ?><tr><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($it['nama']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($it['kategori']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($it['parent']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?= (int)$it['urutan'] ?></td></tr><?php endforeach; ?>
+</table></div></details><?php endif; ?>
+<?php $sm = $importResult['similar'] ?? []; ?>
+<h4 style="margin:14px 0 8px;font-size:14px;color:#84e7ff">Warning kemiripan nama (<?= count($sm) ?>)</h4>
+<?php if(empty($sm)): ?><p style="font-size:13px;color:rgba(255,255,255,0.5)">Tidak ada.</p>
+<?php else: ?><details open style="font-size:13px"><summary style="cursor:pointer;color:#87e3ff">Tampilkan daftar</summary><div style="max-height:220px;overflow:auto;margin-top:8px">
+<table style="width:100%;border-collapse:collapse;font-size:12px">
+<tr><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Nama di file</th><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Mirip dengan</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Skor</th></tr>
+<?php foreach($sm as $s): ?><tr><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($s['file']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($s['existing']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?= (int)$s['score'] ?>%</td></tr><?php endforeach; ?>
+</table>
+<p style="font-size:12px;color:rgba(255,255,255,0.5)">Item tetap disimpan sebagai baru. Cek manual di Master Jenis SDM kalau ini duplikat, gabungkan/hapus salah satu.</p></div></details><?php endif; ?>
+<?php $ck = $importResult['checksum'] ?? []; ?>
+<h4 style="margin:14px 0 8px;font-size:14px;color:#84e7ff">Warning checksum kategori</h4>
+<?php if(empty($ck)): ?><p style="font-size:13px;color:rgba(255,255,255,0.5)">Semua checksum kategori sesuai.</p>
+<?php else: ?><div style="max-height:220px;overflow:auto;font-size:12px">
+<table style="width:100%;border-collapse:collapse">
+<tr><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Kategori</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Total di file</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Hasil parsing</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Selisih</th></tr>
+<?php foreach($ck as $c): ?><tr><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($c['kategori']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?= implode(' / ', array_map('intval', $c['file'])) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?= implode(' / ', array_map('intval', $c['sys'])) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?php $d=[]; foreach([0,1,2,3] as $ii){ $d[]=(int)$c['file'][$ii]-(int)$c['sys'][$ii]; } echo implode(' / ', $d); ?></td></tr><?php endforeach; ?>
+</table></div><?php endif; ?>
+<?php $fr = $importResult['failed_rows'] ?? []; ?>
+<h4 style="margin:14px 0 8px;font-size:14px;color:#84e7ff">Baris gagal (<?= count($fr) ?>)</h4>
+<?php if(empty($fr)): ?><p style="font-size:13px;color:rgba(255,255,255,0.5)">Tidak ada.</p>
+<?php else: ?><details open style="font-size:13px"><summary style="cursor:pointer;color:#87e3ff">Tampilkan daftar</summary><div style="max-height:220px;overflow:auto;margin-top:8px">
+<table style="width:100%;border-collapse:collapse;font-size:12px">
+<tr><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Baris Excel</th><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Isi kolom Jenis SDM</th><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Alasan gagal</th></tr>
+<?php foreach($fr as $f): ?><tr><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><?= (int)$f['row'] ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($f['jenis']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($f['reason']) ?></td></tr><?php endforeach; ?>
+</table></div></details><?php endif; ?>
+<?php if(!empty($importResult['rekap'])):?>
+<h4 style="margin:14px 0 8px;font-size:14px;color:#84e7ff">Agregasi per kecamatan</h4>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<tr><th style="text-align:left;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Kecamatan (agregasi otomatis)</th><th style="text-align:right;padding:6px;border-bottom:1px solid rgba(255,255,255,0.15)">Total SDMK</th></tr>
+<?php foreach($importResult['rekap'] as $rk):?><tr><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06)"><?= htmlspecialchars($rk['nama_kecamatan']) ?></td><td style="padding:6px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:right"><strong><?= number_format((int)$rk['total'],0,',','.') ?></strong></td></tr><?php endforeach;?>
+</table>
+<?php endif;?>
 <?php if(!empty($importResult['warnings'])):?><div style="margin-top:12px;max-height:240px;overflow:auto;background:rgba(0,0,0,0.2);padding:12px;border-radius:10px;font-size:12px"><ul style="margin:0;padding-left:18px"><?php foreach($importResult['warnings'] as $w):?><li style="margin-bottom:4px"><?= htmlspecialchars($w) ?></li><?php endforeach;?></ul></div><?php endif;?></div>
 <?php endif;?>
 <div class="card" style="background:linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,136,204,0.06));border:1px solid rgba(0,212,255,0.2)"><h3><i class="fas fa-filter" style="color:#00d4ff"></i> Pilih Fasyankes</h3>
@@ -901,13 +1209,28 @@ foreach($byJenis as $jenis=>$listJ):?>
 <div class="toolbar">
 <form method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center">
 <input type="hidden" name="action" value="import"><input type="hidden" name="id_faskes" value="<?= $selectedId ?>">
-<input type="file" name="excel_file" accept=".xlsx,.xls" required style="font-size:12px">
+<input type="file" name="excel_file" accept=".xlsx,.xls" required style="font-size:12px" title="Satu file boleh memuat banyak faskes bila ada kolom Kode Faskes; baris tanpa kode memakai faskes terpilih">
 <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,#9C27B0,#6A1B9A)"><i class="fas fa-upload"></i> Import</button>
 </form>
+<p style="flex-basis:100%;font-size:11px;color:rgba(255,255,255,0.45);margin:6px 0 0">Tips: file Template/Export terbaru memuat kolom <strong>Kode Faskes</strong> — satu file bisa berisi banyak faskes sekaligus; kecamatan diambil otomatis dari data faskes. Baris tanpa kode memakai faskes terpilih di atas.</p>
 <form method="POST" onsubmit="return confirm('Reset semua nilai jadi 0 untuk fasyankes ini?')">
 <input type="hidden" name="action" value="reset"><input type="hidden" name="id_faskes" value="<?= $selectedId ?>">
 <button type="submit" class="btn-primary btn-danger"><i class="fas fa-undo"></i> Reset</button>
 </form>
+<button type="button" class="btn-primary" style="background:linear-gradient(135deg,#00bcd4,#00838f)" onclick="document.getElementById('addItemModal').style.display='flex'" title="Tambah jenis SDM baru (tersedia untuk semua faskes)"><i class="fas fa-plus"></i> Tambah Jenis SDM</button>
+</div>
+</div>
+<div id="addItemModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:999;justify-content:center;align-items:center" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-box">
+<h2 style="color:#84e7ff;margin-bottom:6px"><i class="fas fa-plus-circle" style="color:#00d4ff;"></i> Tambah Jenis SDM</h2>
+<p style="font-size:12px;color:rgba(255,193,7,0.85);margin-bottom:16px"><i class="fas fa-exclamation-triangle"></i> Jenis SDM baru akan tersedia untuk <strong>SEMUA faskes</strong>, bukan hanya faskes ini.</p>
+<form method="POST" onsubmit="return fillNamaFromPick('rSpesialis','rNama')"><input type="hidden" name="action" value="add_item"><input type="hidden" name="return_to" value="sdmk.php?tab=faskes&id_faskes=<?= $selectedId ?>"><div class="form-grid">
+<div class="form-group"><label>Nama Jenis SDM *</label><input type="text" name="nama_item" id="rNama" placeholder="Contoh: Apoteker" required></div>
+<div class="form-group"><label>Kategori *</label><select name="kategori" required><option value="Tenaga Kesehatan">A. Tenaga Kesehatan</option><option value="Asisten Tenaga Kesehatan">B. Asisten Tenaga Kesehatan</option><option value="Tenaga Penunjang">C. Tenaga Penunjang</option></select></div>
+<div class="form-group"><label>Parent (untuk sub-item)</label><select name="id_parent" id="rParent" onchange="syncSpesialisRef('rParent','rSpesialisWrap','rNama')"><option value="">-- Tanpa Parent (top-level) --</option><?php foreach($parents as $p):?><option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nama_item']) ?> (<?= htmlspecialchars($p['kategori']) ?>)</option><?php endforeach;?></select></div>
+<div class="form-group" id="rSpesialisWrap" style="display:none"><label>Pilih cepat sub-spesialis <span style="font-weight:400;color:rgba(255,255,255,0.5)">(opsional — mengisi Nama otomatis, tetap bisa diedit)</span></label><select id="rSpesialis" onchange="pickSpesialis('rSpesialis','rNama')"><option value="">-- Pilih sub-spesialis --</option><?php foreach($spesialisRef as $sp):?><option value="Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?>">Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?></option><?php endforeach;?></select></div>
+<div class="form-group"><label>Urutan</label><input type="number" name="urutan" value="<?= count($allItems)+1 ?>" min="0"></div>
+</div><div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Tambah</button><button type="button" class="btn-icon btn-danger" onclick="document.getElementById('addItemModal').style.display='none'">Batal</button></div></form>
 </div>
 </div>
 <form method="POST" id="rekapForm">
@@ -962,14 +1285,18 @@ foreach($kategoriOrder as $kat){
    echo '<td class="input-cell"><input type="number" min="0" name="nonasn_l['.$it['id'].']" value="'.$nl.'" class="inp" data-profesi="'.$it['id'].'"></td>';
    echo '<td class="input-cell"><input type="number" min="0" name="nonasn_p['.$it['id'].']" value="'.$np.'" class="inp" data-profesi="'.$it['id'].'"></td>';
    echo '<td class="num jumlah-cell" style="font-weight:700;background:rgba(255,255,255,0.04)">'.$jum.'</td>';
-    echo '<td class="num" style="display:flex;gap:6px;justify-content:center">';
-    if($d['id']){
-      echo '<button type="button" onclick="if(confirm(\'Reset nilai baris ini ke 0?\')) postRowAction(\'reset_row\','.$d['id'].')" title="Reset ke 0" class="btn-primary" style="padding:4px 8px;font-size:11px;background:rgba(255,193,7,0.15);color:#ffd54f;border:1px solid rgba(255,193,7,0.25)"><i class="fas fa-undo"></i></button>';
-      echo '<button type="button" onclick="if(confirm(\'Hapus baris ini? (item akan hilang dari rekap sampai diisi ulang)\')) postRowAction(\'delete_row\','.$d['id'].')" title="Hapus Baris" class="btn-primary btn-danger" style="padding:4px 8px;font-size:11px"><i class="fas fa-trash"></i></button>';
-    } else {
-      echo '<span style="color:rgba(255,255,255,0.2)">-</span>';
-    }
-    echo '</td>';
+     echo '<td class="num" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">';
+     // Aksi nilai (per faskes ini)
+     if($d['id']){
+       echo '<button type="button" onclick="if(confirm(\'Reset nilai baris ini ke 0?\')) postRowAction(\'reset_row\','.$d['id'].')" title="Reset ke 0" class="btn-primary" style="padding:4px 8px;font-size:11px;background:rgba(255,193,7,0.15);color:#ffd54f;border:1px solid rgba(255,193,7,0.25)"><i class="fas fa-undo"></i></button>';
+       echo '<button type="button" onclick="if(confirm(\'Hapus baris ini? (item akan hilang dari rekap sampai diisi ulang)\')) postRowAction(\'delete_row\','.$d['id'].')" title="Hapus Baris" class="btn-primary btn-danger" style="padding:4px 8px;font-size:11px"><i class="fas fa-trash"></i></button>';
+     }
+     // Aksi master item (berlaku global): Edit + Hapus jenis SDM.
+     $fcCnt = $itemFaskesCount[$it['id']] ?? 0;
+     $chCnt = $itemChildCount[$it['id']] ?? 0;
+     echo '<button type="button" class="btn-icon edit-btn-rekap" title="Edit Jenis SDM" style="padding:4px 8px;font-size:11px" data-id="'.$it['id'].'" data-nama="'.htmlspecialchars($it['nama_item']).'" data-kategori="'.htmlspecialchars($it['kategori']).'" data-parent="'.(int)($it['parent_id']??0).'" data-urutan="'.(int)$it['urutan'].'" data-aktif="Y" data-faskes="'.$fcCnt.'" data-child="'.$chCnt.'" onclick="openRekapEdit(this)"><i class="fas fa-pen"></i></button>';
+     echo '<form method="POST" style="display:inline" onsubmit="return confirmRekapDelete(this)"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="id" value="'.$it['id'].'"><input type="hidden" name="return_to" value="sdmk.php?tab=faskes&id_faskes='.$selectedId.'"><input type="hidden" class="del-child" value="'.$chCnt.'"><input type="hidden" class="del-faskes" value="'.$fcCnt.'"><input type="hidden" class="del-nama" value="'.htmlspecialchars($it['nama_item']).'"><button type="submit" class="btn-icon btn-danger" title="Nonaktifkan Jenis SDM" style="padding:4px 8px;font-size:11px"><i class="fas fa-trash"></i></button></form>';
+     echo '</td>';
    echo '</tr>';
  }
  echo '<tr class="total-row" data-total-kat="'.htmlspecialchars($kat).'"><td colspan="6" style="text-align:right">Total '.htmlspecialchars($kategoriLabel[$kat]).'</td><td class="num cat-total">0</td><td></td></tr>';
@@ -979,7 +1306,7 @@ $lblGT = labelJenisFaskes($selectedFaskes['jenis']); echo '<tr class="grand-row"
 </tbody>
 </table>
 </div>
-<div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Rekap</button><span style="font-size:11px;color:rgba(255,255,255,0.4)">Validasi: nilai negatif →0 | Semua baris bernomor editable | Header/Total read-only (otomatis)</span></div>
+<div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Rekap</button></div>
 </form>
 <form id="rowActionForm" method="POST" style="display:none">
 <input type="hidden" name="action" id="rowAction" value="">
@@ -987,6 +1314,7 @@ $lblGT = labelJenisFaskes($selectedFaskes['jenis']); echo '<tr class="grand-row"
 <input type="hidden" name="row_id" id="rowId" value="">
 </form>
 <script>
+var CURRENT_FASKES = <?= (int)$selectedId ?>;
 function postRowAction(action, rowId){
   document.getElementById('rowAction').value = action;
   document.getElementById('rowId').value = rowId;
@@ -1034,15 +1362,65 @@ function postRowAction(action, rowId){
 </div>
 <div id="editModal"><div class="modal-box">
 <h2 style="color:#84e7ff;margin-bottom:16px"><i class="fas fa-pen" style="color:#00d4ff"></i> Edit Jenis SDM</h2>
-<form method="POST"><input type="hidden" name="action" value="edit_item"><input type="hidden" name="id" id="eId"><div class="form-grid">
+<form method="POST" onsubmit="return fillNamaFromPick('eSpesialis','eNama')"><input type="hidden" name="action" value="edit_item"><input type="hidden" name="id" id="eId"><input type="hidden" name="return_to" id="eReturn" value=""><div class="form-grid">
 <div class="form-group"><label>Nama *</label><input type="text" name="nama_item" id="eNama" required></div>
 <div class="form-group"><label>Kategori *</label><select name="kategori" id="eKat"><option value="Tenaga Kesehatan">A. Tenaga Kesehatan</option><option value="Asisten Tenaga Kesehatan">B. Asisten Tenaga Kesehatan</option><option value="Tenaga Penunjang">C. Tenaga Penunjang</option></select></div>
-<div class="form-group"><label>Parent</label><select name="id_parent" id="eParent"><option value="">-- Tanpa Parent --</option><?php foreach($parents as $p):?><option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nama_item']) ?></option><?php endforeach;?></select></div>
+<div class="form-group"><label>Parent</label><select name="id_parent" id="eParent" onchange="syncSpesialisRef('eParent','eSpesialisWrap','eNama')"><option value="">-- Tanpa Parent --</option><?php foreach($parents as $p):?><option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['nama_item']) ?></option><?php endforeach;?></select></div>
+<div class="form-group" id="eSpesialisWrap" style="display:none"><label>Pilih cepat sub-spesialis <span style="font-weight:400;color:rgba(255,255,255,0.5)">(opsional)</span></label><select id="eSpesialis" onchange="pickSpesialis('eSpesialis','eNama')"><option value="">-- Pilih sub-spesialis --</option><?php foreach($spesialisRef as $sp):?><option value="Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?>">Dokter <?= htmlspecialchars($sp['nama']) ?><?= $sp['kode']!=='' ? ' ('.htmlspecialchars($sp['kode']).')' : '' ?></option><?php endforeach;?></select></div>
 <div class="form-group"><label>Urutan</label><input type="number" name="urutan" id="eUrutan" min="0"></div>
 <div class="form-group"><label>Aktif</label><select name="aktif" id="eAktif"><option value="Y">Y - Aktif</option><option value="N">N - Nonaktif</option></select></div>
 </div><div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end"><button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan</button><button type="button" class="btn-icon btn-danger" onclick="document.getElementById('editModal').style.display='none'">Batal</button></div></form>
 </div></div>
 <script>
+function syncSpesialisRef(selId, wrapId, namaId){
+  // Tampilkan pilihan cepat sub-spesialis hanya bila parent terpilih
+  // nama-nya mengandung "dokter" (mis. Dokter Umum, Dokter Gigi).
+  var sel=document.getElementById(selId), wrap=document.getElementById(wrapId);
+  if(!sel||!wrap) return;
+  var txt=sel.options.length&&sel.selectedIndex>=0?sel.options[sel.selectedIndex].text:'';
+  var isDokter=/dokter/i.test(txt)&&sel.value!=='';
+  wrap.style.display=isDokter?'block':'none';
+}
+function pickSpesialis(selId, namaId){
+  // Isi field Nama dari dropdown pilihan cepat (boleh diedit manual).
+  var sel=document.getElementById(selId), inp=document.getElementById(namaId);
+  if(sel&&inp&&sel.value!==''){ inp.value=sel.value; }
+}
+function fillNamaFromPick(selId, namaId){
+  // Pengaman submit: bila Nama kosong tapi pilihan cepat terisi,
+  // salin dulu supaya tidak tersimpan baris tanpa nama.
+  var sel=document.getElementById(selId), inp=document.getElementById(namaId);
+  if(sel&&inp&&inp.value.trim()===''&&sel.value!==''){ inp.value=sel.value; }
+  return true;
+}
+function openRekapEdit(btn){
+  // Edit jenis SDM dari tab Rekap: reuse modal + handler edit_item,
+  // TANPA pindah tab. Warning bila item sudah punya data di N faskes.
+  var n = parseInt(btn.dataset.faskes || '0', 10);
+  if(n > 0){
+    if(!confirm('Item ini sudah memiliki data di ' + n + ' faskes.\nMengubah kategori/parent akan memengaruhi Total di faskes tsb.\n\nLanjutkan edit?')) return;
+  }
+  document.getElementById('eId').value = btn.dataset.id;
+  document.getElementById('eNama').value = btn.dataset.nama;
+  document.getElementById('eKat').value = btn.dataset.kategori;
+  document.getElementById('eParent').value = btn.dataset.parent || '';
+  document.getElementById('eUrutan').value = btn.dataset.urutan;
+  document.getElementById('eAktif').value = btn.dataset.aktif;
+  document.getElementById('eSpesialis').value = '';
+  document.getElementById('eReturn').value = 'sdmk.php?tab=faskes&id_faskes=' + CURRENT_FASKES;
+  syncSpesialisRef('eParent','eSpesialisWrap','eNama');
+  document.getElementById('editModal').style.display = 'flex';
+}
+function confirmRekapDelete(form){
+  // Hapus (soft delete) jenis SDM dari tab Rekap + warning sub/data.
+  var nama = form.querySelector('.del-nama').value;
+  var ch = parseInt(form.querySelector('.del-child').value || '0', 10);
+  var fk = parseInt(form.querySelector('.del-faskes').value || '0', 10);
+  var msg = "Nonaktifkan jenis '" + nama + "'? (soft delete)";
+  if(ch > 0) msg += "\n\nItem ini memiliki " + ch + " sub-item aktif.";
+  if(fk > 0) msg += "\nItem ini sudah memiliki data di " + fk + " faskes.";
+  return confirm(msg);
+}
 function switchTab(name){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.getElementById('tab-items').style.display = name==='items'?'block':'none';
@@ -1058,6 +1436,8 @@ document.querySelectorAll('.edit-btn').forEach(b=>b.onclick=function(){
   document.getElementById('eParent').value=this.dataset.parent||'';
   document.getElementById('eUrutan').value=this.dataset.urutan;
   document.getElementById('eAktif').value=this.dataset.aktif;
+  document.getElementById('eSpesialis').value='';
+  syncSpesialisRef('eParent','eSpesialisWrap','eNama');
   document.getElementById('editModal').style.display='flex';
   switchTab('items');
 });
