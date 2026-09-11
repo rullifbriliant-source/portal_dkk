@@ -361,44 +361,10 @@
     <object id="svgInteractive" data="assets/svg/peta_sukoharjo_satelit_interaktif.svg" type="image/svg+xml"></object>
 
     <!-- ===================================================
-    ORBIT MENU (PENYAKIT TERBANYAK)
+     ORBIT MENU (PENYAKIT TERBANYAK) — DINAMIS dari Top 6 (10 Penyakit Populer)
     =================================================== -->
     <div id="orbitMenu">
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-virus-covid"></i>
-            <span class="disease-name">COVID-19</span>
-            <span class="disease-count">2.000</span>
-        </div>
-
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-lungs-virus"></i>
-            <span class="disease-name">ISPA</span>
-            <span class="disease-count">1.540</span>
-        </div>
-
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-heart-pulse"></i>
-            <span class="disease-name">Hipertensi</span>
-            <span class="disease-count">1.230</span>
-        </div>
-
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-droplet"></i>
-            <span class="disease-name">Diare</span>
-            <span class="disease-count">890</span>
-        </div>
-
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-syringe"></i>
-            <span class="disease-name">TBC</span>
-            <span class="disease-count">640</span>
-        </div>
-
-        <div class="orbit-item disease-orbit-item">
-            <i class="fa-solid fa-bone"></i>
-            <span class="disease-name">Diabetes</span>
-            <span class="disease-count">510</span>
-        </div>
+        <!-- Akan diisi dinamis via PortalAPI.renderOrbit() dari api/get_penyakit_populer.php (Top 6) -->
     </div>
 
 </section>

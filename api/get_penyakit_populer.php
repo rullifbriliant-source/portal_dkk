@@ -8,7 +8,7 @@ $kecamatan = isset($_GET['kecamatan']) ? mysqli_real_escape_string($config, $_GE
 
 if ($kecamatan) {
     // AMBIL DAFTAR 10 NAMA PENYAKIT MASTER DARI TOTAL KABUPATEN (YANG AKTIF SAJA)
-    $sqlMaster = "SELECT nama_item FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY urutan LIMIT 10";
+    $sqlMaster = "SELECT nama_item FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY nilai DESC, urutan ASC LIMIT 10";
     $queryMaster = mysqli_query($config, $sqlMaster);
     
     // AMBIL NILAI YANG SUDAH DIINPUT PER KECAMATAN
@@ -30,9 +30,12 @@ if ($kecamatan) {
             'nilai' => isset($dataNilai[$nama]) ? $dataNilai[$nama] : 0
         ];
     }
+    // Urutkan per-kecamatan juga berdasarkan nilai DESC agar ranking dinamis per kecamatan
+    usort($items, function($a,$b){ return $b['nilai'] <=> $a['nilai']; });
     
 } else {
-    $sql = "SELECT id, nama_item, nilai FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY urutan LIMIT 10";
+    // TOTAL KABUPATEN: SUM sudah tersimpan di tbl_penyakit_items (total kabupaten), ambil ORDER BY nilai DESC agar ranking dinamis
+    $sql = "SELECT id, nama_item, nilai FROM tbl_penyakit_items WHERE aktif='Y' ORDER BY nilai DESC, urutan ASC LIMIT 10";
     $query = mysqli_query($config, $sql);
     $items = [];
     while ($row = mysqli_fetch_assoc($query)) {

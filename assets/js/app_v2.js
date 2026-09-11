@@ -327,12 +327,15 @@ centerY: 270,
             return;
         }
         this.items = this.menu.querySelectorAll(".orbit-item");
-        if (this.items.length === 0) {
-            Log.warn("orbit-item tidak ditemukan");
-            return;
-        }
+        // Orbit dinamis: boleh 0 item saat init (akan diisi dari Top 6 via PortalAPI.renderOrbit)
         this.bind();
-        this.animate();
+        if (this.items.length > 0) {
+            this.animate();
+        } else {
+            Log.info("Orbit init: menunggu data Top 6 dari API");
+            // Tetap siapkan animasi, akan di-restart saat renderOrbit mengisi item
+            this.animate();
+        }
     },
     bind: function() {
         this.menu.addEventListener("mouseenter", function() {
@@ -1610,7 +1613,7 @@ renderSdm: function(items) {
             .then(function(json) {
                 console.log("API Response:", json);
                 if (json.status) {
-                    self.renderPenyakit(json.data);
+                    self.renderPenyakit(json.data, kecamatan);
                 }
             })
             .catch(function(err) {
@@ -1619,8 +1622,8 @@ renderSdm: function(items) {
             });
     },
 
-renderPenyakit: function(items) {
-    console.log("renderPenyakit dipanggil, items:", items.length);
+renderPenyakit: function(items, kecamatan) {
+    console.log("renderPenyakit dipanggil, items:", items.length, "kecamatan:", kecamatan);
     var container = DOM.id("penyakitContainer");
     console.log("Container:", container);
     if (!container) {
@@ -1638,6 +1641,73 @@ renderPenyakit: function(items) {
     html += '</table>';
     container.innerHTML = html;
     console.log("HTML sudah di-render!");
+
+    // Orbit hanya untuk TOTAL kabupaten (tanpa kecamatan) -> ambil 6 teratas dari Top 10 yang sama
+    if (!kecamatan) {
+        this.renderOrbit(items);
+    }
+},
+
+renderOrbit: function(items) {
+    var menu = DOM.id("orbitMenu");
+    if (!menu) {
+        Log.warn("orbitMenu tidak ditemukan untuk renderOrbit");
+        return;
+    }
+    // Ambil 6 ranking teratas dari Top 10 yang sama (sumber data identik)
+    var top6 = (items || []).slice(0, 6);
+    if (top6.length === 0) {
+        Log.warn("Tidak ada data penyakit untuk orbit");
+        return;
+    }
+    // Mapping icon dinamis per penyakit (fallback generic)
+    var iconMap = {
+        'jantung': 'fa-heart-pulse',
+        'hipertensi': 'fa-heart-pulse',
+        'covid-19': 'fa-virus-covid',
+        'covid': 'fa-virus-covid',
+        'ispa': 'fa-lungs-virus',
+        'diare': 'fa-droplet',
+        'gastritis': 'fa-stomach',
+        'tbc': 'fa-syringe',
+        'diabetes': 'fa-bone',
+        'asma': 'fa-lungs',
+        'pneumonia': 'fa-lungs-virus',
+        'demam berdarah': 'fa-mosquito',
+        'dbd': 'fa-mosquito',
+        'jantung': 'fa-heart-pulse'
+    };
+    // Kosongkan orbit lama (hardcode) dan isi dinamis
+    menu.innerHTML = '';
+    top6.forEach(function(item){
+        var nama = item.nama || item.nama_item || '';
+        var nilai = item.nilai || 0;
+        var key = nama.toLowerCase();
+        var icon = iconMap[key] || 'fa-virus';
+        // Cari partial match
+        if (!iconMap[key]) {
+            for (var k in iconMap) {
+                if (key.indexOf(k) !== -1 || k.indexOf(key) !== -1) { icon = iconMap[k]; break; }
+            }
+        }
+        var div = document.createElement('div');
+        div.className = 'orbit-item disease-orbit-item';
+        div.setAttribute('data-disease', nama);
+        div.innerHTML = '<i class="fa-solid ' + icon + '"></i><span class="disease-name">' + nama + '</span><span class="disease-count">' + Util.number(nilai) + '</span>';
+        menu.appendChild(div);
+    });
+    // Re-bind Orbit engine agar item baru ikut animasi
+    if (typeof Orbit !== 'undefined' && Orbit.menu) {
+        Orbit.items = menu.querySelectorAll('.orbit-item');
+        // Re-bind hover/scale untuk item baru
+        Orbit.items.forEach(function(item){
+            item.style.position = 'absolute';
+            item.style.transition = 'transform .25s ease';
+            item.addEventListener('mouseenter', function(){ item.style.transform = 'scale(1.15)'; });
+            item.addEventListener('mouseleave', function(){ item.style.transform = 'scale(1)'; });
+        });
+        Log.info('Orbit diperbarui dinamis Top 6:', top6.map(function(x){return x.nama+':'+x.nilai;}).join(', '));
+    }
 },
 
     /* ==========================================================
