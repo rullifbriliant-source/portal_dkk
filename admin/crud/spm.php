@@ -182,6 +182,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: spm.php?periode=' . urlencode($_POST['periode_back'] ?? '') . '&msg=deleted'); exit;
     }
 
+    // ---------- HAPUS SEMUA (permanen, transaksi, child dulu) ----------
+    if ($action === 'delete_all') {
+        mysqli_begin_transaction($config);
+        try {
+            // Hapus child dulu agar tidak error FK (jika ada), baru parent. Tanpa SET FOREIGN_KEY_CHECKS=0.
+            // Hapus permanen (DELETE), bukan soft delete, sesuai permintaan.
+            if (!mysqli_query($config, "DELETE FROM tbl_spm_target")) {
+                throw new Exception(mysqli_error($config));
+            }
+            if (!mysqli_query($config, "DELETE FROM tbl_spm")) {
+                throw new Exception(mysqli_error($config));
+            }
+            // tbl_spm_sasaran dibiarkan (master sasaran), tidak termasuk dataset SPM yang wajib dihapus.
+            // Jika ingin kosongkan juga, uncomment: mysqli_query($config, "DELETE FROM tbl_spm_sasaran");
+            mysqli_commit($config);
+            header('Location: spm.php?msg=deleted_all'); exit;
+        } catch (Throwable $e) {
+            mysqli_rollback($config);
+            // Simpan error ke session untuk ditampilkan
+            if (session_status() === PHP_SESSION_NONE) session_start();
+            $_SESSION['spm_delete_all_error'] = $e->getMessage();
+            header('Location: spm.php?msg=delete_all_failed'); exit;
+        }
+    }
+
     // ---------- IMPORT EXCEL (UPSERT by bkey + transaksi per sheet) ----------
     if ($action === 'import') {
         $tahunOverride = (int)($_POST['tahun'] ?? 0);
@@ -408,6 +433,8 @@ $counts = SpmLib::counts($config);
     <?php if ($msg === 'exists'): ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Data dengan identitas yang sama sudah ada (business key duplikat). Perubahan dibatalkan.</div><?php endif; ?>
     <?php if ($msg === 'updated'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Data SPM berhasil diperbarui. Tampilan public otomatis mengikuti.</div><?php endif; ?>
     <?php if ($msg === 'deleted'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Data SPM berhasil dihapus (soft delete).</div><?php endif; ?>
+    <?php if ($msg === 'deleted_all'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Semua data SPM berhasil dihapus.</div><?php endif; ?>
+    <?php if ($msg === 'delete_all_failed'): ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Gagal menghapus semua data SPM: <?= htmlspecialchars($_SESSION['spm_delete_all_error'] ?? 'Unknown error') ?><?php unset($_SESSION['spm_delete_all_error']); ?></div><?php endif; ?>
     <?php if ($msg === 'invalid'): ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Jenis Layanan dan Indikator wajib diisi.</div><?php endif; ?>
     <?php if ($msg === 'error' || $msg === 'notfound'): ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> Operasi gagal. Silakan coba lagi.</div><?php endif; ?>
 
@@ -452,6 +479,7 @@ $counts = SpmLib::counts($config);
             <a class="btn btn-success" href="spm_export.php<?= $fPeriode !== '' ? '?periode=' . urlencode($fPeriode) : '' ?>"><i class="fas fa-file-export"></i> Export Excel</a>
             <a class="btn" href="spm_template.php"><i class="fas fa-file-download"></i> Download Template</a>
             <a class="btn btn-warn" href="spm_sasaran.php"><i class="fas fa-bullseye"></i> Kelola Sasaran</a>
+            <button type="button" class="btn btn-danger" id="btnHapusSemua" onclick="openDeleteAllModal()"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
         </div>
         <form method="POST" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
             <input type="hidden" name="action" value="import">
@@ -633,5 +661,29 @@ $counts = SpmLib::counts($config);
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Modal Hapus Semua -->
+<div id="deleteAllModal" style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; background:rgba(2,10,20,0.78); backdrop-filter:blur(4px);">
+    <div style="background:linear-gradient(160deg,#0a2233 0%,#061426 100%); border:1px solid rgba(255,82,82,0.35); border-radius:18px; padding:26px; max-width:440px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="width:56px; height:56px; border-radius:50%; background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:#ff8a80; font-size:22px;"><i class="fas fa-exclamation-triangle"></i></div>
+        <h3 style="color:#fff; font-size:18px; font-weight:700; margin-bottom:8px;">Hapus Semua Data SPM?</h3>
+        <p style="color:#fff; font-size:14px; margin-bottom:6px;">Apakah Anda yakin ingin menghapus semua data SPM?</p>
+        <p style="color:rgba(255,255,255,0.6); font-size:12px; margin-bottom:20px;">Data yang dihapus akan hilang secara permanen dan tidak dapat dipulihkan.</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button type="button" class="btn" onclick="closeDeleteAllModal()" style="min-width:100px;">Batal</button>
+            <form method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="delete_all">
+                <button type="submit" class="btn btn-danger" style="min-width:130px;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openDeleteAllModal(){ document.getElementById('deleteAllModal').style.display='flex'; document.body.style.overflow='hidden'; }
+function closeDeleteAllModal(){ document.getElementById('deleteAllModal').style.display='none'; document.body.style.overflow=''; }
+document.getElementById('deleteAllModal')?.addEventListener('click', function(e){ if(e.target===this) closeDeleteAllModal(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDeleteAllModal(); });
+</script>
+
 </body>
 </html>

@@ -199,7 +199,7 @@ class SpmLib
         $ids = [];
         while ($r = mysqli_fetch_assoc($q)) {
             $r['targets'] = [];
-            foreach ($orderedNames as $kn) $r['targets'][$kn] = 0.0;
+            foreach ($orderedNames as $kn) $r['targets'][$kn] = null;
             $rows[(int)$r['id']] = $r;
             $ids[] = (int)$r['id'];
         }
@@ -213,14 +213,14 @@ class SpmLib
                     $sid = (int)$t['id_spm'];
                     if (!isset($rows[$sid])) continue;
                     $kn = self::normKec($t['nama_kecamatan']);
-                    if (isset($rows[$sid]['targets'][$kn])) {
+                    if (array_key_exists($kn, $rows[$sid]['targets'])) {
                         $rows[$sid]['targets'][$kn] = (float)$t['target'];
                     }
                 }
             }
         }
         foreach ($rows as &$r) {
-            $sum = array_sum($r['targets']);
+            $sum = array_sum(array_map(function ($v) { return $v === null || $v === '' ? 0 : (float)$v; }, $r['targets']));
             $r['total'] = ($r['total_manual'] !== null && $r['total_manual'] !== '')
                 ? (float)$r['total_manual']
                 : $sum;
@@ -407,42 +407,6 @@ class SpmLib
         if (!$res['colIndikator']) $res['colIndikator'] = 3;
         if (!$res['colLayanan']) $res['colLayanan'] = ($res['colIndikator'] > 1) ? $res['colIndikator'] - 1 : 1;
 
-        // ---- VALIDASI SUB-NO vs NOMOR URUT ----
-        // Kolom nomor urut (1,2,3..N berurutan tanpa jeda) BUKAN sub-no.
-        // Sub-no asli punya jeda (baris induk kosong) dan berulang per layanan.
-        $colVals = function ($c, $limit = 80) use ($sheet, $res, $maxRow) {
-            $out = [];
-            for ($r = $res['headerRow'] + 1; $r <= min($res['headerRow'] + $limit, $maxRow); $r++) {
-                $out[] = trim((string)$sheet->getCellByColumnAndRow($c, $r)->getCalculatedValue());
-            }
-            return $out;
-        };
-        $isStrictSeq = function ($vals) {
-            $nums = [];
-            foreach ($vals as $v) {
-                if ($v === '') return false;
-                if (!is_numeric($v)) return false;
-                $nums[] = (int)$v;
-            }
-            if (count($nums) < 5) return false;
-            for ($i = 0; $i < count($nums); $i++) {
-                if ($nums[$i] !== $i + 1) return false;
-            }
-            return true;
-        };
-        if ($res['colSubno'] && $isStrictSeq($colVals($res['colSubno']))) {
-            $res['warnings'][] = "kolom {$res['colSubno']} berisi nomor urut (1,2,3..), bukan Sub-No; diabaikan.";
-            $res['colSubno'] = 0;
-        }
-        if (!$res['colSubno'] && !empty($res['runningNo'])) {
-            // promosikan kolom 'No' telanjang bila isinya berpola sub-no (ada jeda + berulang)
-            $vals = $colVals($res['runningNo']);
-            $hasBlank = in_array('', $vals, true);
-            if ($hasBlank && !$isStrictSeq($vals)) {
-                $res['colSubno'] = $res['runningNo'];
-            }
-        }
-
         // ---- VALIDASI ISI: pastikan kolom indikator benar-benar berisi teks ----
         // (mencegah bug lama: kolom "Sub No" berisi 1,2,3 terbaca sebagai indikator)
         $samples = [];
@@ -491,6 +455,45 @@ class SpmLib
                 }
             }
         }
+
+        // Cegah duplikasi satuan/sasaran ke kolom yang sama (Excel SPM tidak punya kolom Sasaran terpisah)
+        if ($res['colSasaran'] && $res['colSatuan'] && $res['colSasaran'] === $res['colSatuan']) {
+            $res['colSasaran'] = 0;
+        }
+
+        // ---- VALIDASI SUB-NO vs NOMOR URUT (dijalankan SETELAH koreksi indikator agar tidak menimpa colSubno yang baru dikoreksi) ----
+        $colVals = function ($c, $limit = 80) use ($sheet, $res, $maxRow) {
+            $out = [];
+            for ($r = $res['headerRow'] + 1; $r <= min($res['headerRow'] + $limit, $maxRow); $r++) {
+                $out[] = trim((string)$sheet->getCellByColumnAndRow($c, $r)->getCalculatedValue());
+            }
+            return $out;
+        };
+        $isStrictSeq = function ($vals) {
+            $nums = [];
+            foreach ($vals as $v) {
+                if ($v === '') return false;
+                if (!is_numeric($v)) return false;
+                $nums[] = (int)$v;
+            }
+            if (count($nums) < 5) return false;
+            for ($i = 0; $i < count($nums); $i++) {
+                if ($nums[$i] !== $i + 1) return false;
+            }
+            return true;
+        };
+        if ($res['colSubno'] && $isStrictSeq($colVals($res['colSubno']))) {
+            $res['warnings'][] = "kolom {$res['colSubno']} berisi nomor urut (1,2,3..), bukan Sub-No; diabaikan.";
+            $res['colSubno'] = 0;
+        }
+        if (!$res['colSubno'] && !empty($res['runningNo'])) {
+            $vals = $colVals($res['runningNo']);
+            $hasBlank = in_array('', $vals, true);
+            if ($hasBlank && !$isStrictSeq($vals)) {
+                $res['colSubno'] = $res['runningNo'];
+            }
+        }
+
         return $res;
     }
 
@@ -558,8 +561,9 @@ class SpmLib
         // jenis: s,s,s,i,s,s,i,i,d,s,i  (11 param)
         $stTgt = mysqli_prepare($db, "INSERT INTO tbl_spm_target (id_spm, id_kecamatan, target, aktif)
             VALUES (?,?,?,'Y') ON DUPLICATE KEY UPDATE target=VALUES(target), aktif='Y', updated_at=NOW()");
+        $stDelTgt = mysqli_prepare($db, "DELETE FROM tbl_spm_target WHERE id_spm=? AND id_kecamatan=?");
         $stSas = mysqli_prepare($db, "INSERT IGNORE INTO tbl_spm_sasaran (nama, aktif) VALUES (?,'Y')");
-        if (!$stFind || !$stIns || !$stUpd || !$stTgt || !$stSas) {
+        if (!$stFind || !$stIns || !$stUpd || !$stTgt || !$stSas || !$stDelTgt) {
             $stat['failed']++;
             $stat['errors'][] = "Sheet '$sheetName': gagal menyiapkan query (" . mysqli_error($db) . ").";
             return $stat;
@@ -587,6 +591,22 @@ class SpmLib
                 $indikator = $get($colIndikator);
                 $satuan = $colSatuan ? $get($colSatuan) : '';
                 $sasaran = $colSasaran ? $get($colSasaran) : '';
+
+                // Handle parent row merged cell: C:D merged -> bullet di C (subNo), indikator di D kosong.
+                // Jika indikator kosong tetapi subNo berisi teks indikator (• / Jumlah yang Harus Dilayani), tukarkan.
+                if ($indikator === '' && $subNo !== '') {
+                    $subLow = mb_strtolower($subNo, 'UTF-8');
+                    $isParentText = (strpos($subNo, '•') !== false)
+                        || strpos($subLow, 'jumlah yang harus dilayani') !== false
+                        || strpos($subLow, 'jumlah yang harus') !== false
+                        || mb_strlen($subNo, 'UTF-8') > 12;
+                    // subNo panjang >12 kemungkinan indikator teks, bukan nomor 1-2 digit
+                    // Pastikan bukan nomor murni: indikator parent biasanya >10 karakter
+                    if ($isParentText && !is_numeric($subNo)) {
+                        $indikator = $subNo;
+                        $subNo = '';
+                    }
+                }
 
                 // baris kosong total -> lewati (bukan error)
                 $hasTarget = false;
@@ -633,11 +653,16 @@ class SpmLib
                         $rowFailed = true;
                         break;
                     }
-                    $targets[$kn] = self::parseNumber($raw);
+                    $trimRaw = trim((string)$raw);
+                    if ($trimRaw === '' || $trimRaw === '-') {
+                        $targets[$kn] = null;
+                    } else {
+                        $targets[$kn] = self::parseNumber($raw);
+                    }
                 }
                 if ($rowFailed) continue;
 
-                $sum = array_sum($targets);
+                $sum = array_sum(array_map(function ($v) { return $v === null || $v === '' ? 0 : (float)$v; }, $targets));
                 $totalManual = null;
                 if ($colTotal) {
                     $rawT = $getRaw($colTotal);
@@ -723,10 +748,15 @@ class SpmLib
                     $lastParentLay = $layanan;
                 }
 
-                // UPSERT target kecamatan: (id_spm, id_kecamatan) sudah UNIQUE
+                // UPSERT target kecamatan: (id_spm, id_kecamatan) sudah UNIQUE; kosong -> hapus baris target
                 foreach ($targets as $kn => $val) {
                     if (!isset($kecMap[$kn])) continue;
                     $kid = (int)$kecMap[$kn];
+                    if ($val === null) {
+                        mysqli_stmt_bind_param($stDelTgt, 'ii', $id, $kid);
+                        mysqli_stmt_execute($stDelTgt);
+                        continue;
+                    }
                     $v = (float)$val;
                     mysqli_stmt_bind_param($stTgt, 'iid', $id, $kid, $v);
                     if (!mysqli_stmt_execute($stTgt)) {
@@ -779,7 +809,7 @@ class SpmLib
             $stat['failed']++;
             if (count($stat['errors']) < 30) $stat['errors'][] = "Sheet '$sheetName': " . $e->getMessage() . " (transaksi di-rollback).";
         }
-        foreach ([$stFind, $stIns, $stUpd, $stTgt, $stSas] as $st) {
+        foreach ([$stFind, $stIns, $stUpd, $stTgt, $stDelTgt, $stSas] as $st) {
             if ($st) mysqli_stmt_close($st);
         }
         return $stat;

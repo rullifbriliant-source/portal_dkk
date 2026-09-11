@@ -143,6 +143,7 @@ table.spm-table {
     font-size: 12px;
     color: #000;
     background: #fff;
+    table-layout: fixed;
 }
 
 .spm-table th,
@@ -170,6 +171,11 @@ table.spm-table {
     white-space: nowrap;
 }
 
+.spm-table thead th.h-kec-group {
+    white-space: normal;
+    min-width: 960px;
+}
+
 .spm-table thead tr:nth-child(2) th {
     top: 33px;
     background: #FFC000;
@@ -181,6 +187,7 @@ table.spm-table {
 .spm-table th.h-layanan, .spm-table td.c-layanan { min-width: 200px; max-width: 260px; }
 .spm-table th.h-indikator { min-width: 370px; }
 .spm-table td.c-sub { min-width: 50px; }
+.spm-table td.c-sub[colspan="2"] { min-width: 370px; }
 .spm-table td.c-indikator { min-width: 320px; max-width: 420px; }
 .spm-table th.h-satuan, .spm-table td.c-satuan { min-width: 90px; }
 .spm-table th.h-kec, .spm-table td.c-angka { min-width: 80px; }

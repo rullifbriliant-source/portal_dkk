@@ -189,12 +189,17 @@ const SpmModal = {
 
         // Header meniru Excel: No | Jenis Layanan SPM | [Indikator Kinerja / Jenis Layanan SPM (C+D)] |
         // SATUAN | [Indikator Pencapaian / Output Kecamatan (12 kec)] | TOTAL. Tanpa kolom Sasaran.
-        let html = '<table class="spm-table"><thead><tr>';
+        // FIX: colgroup 18 kolom (No 44 + Layanan 260 + Sub 50 + Indikator 320 + Satuan 110 + 12*Kec 80-110 + Total 90) agar browser tidak salah letak header baris kedua.
+        let html = '<table class="spm-table"><colgroup>';
+        html += '<col style="width:44px"><col style="width:260px"><col style="width:50px"><col style="width:320px"><col style="width:110px">';
+        for (let i = 0; i < 12; i++) html += '<col style="width:90px">';
+        html += '<col style="width:90px">';
+        html += '</colgroup><thead><tr>';
         html += '<th rowspan="2" class="h-no">No</th>';
         html += '<th rowspan="2" class="h-layanan">Jenis Layanan SPM</th>';
-        html += '<th colspan="2" class="h-indikator">Indikator Kinerja / Jenis Layanan SPM</th>';
+        html += '<th colspan="2" rowspan="2" class="h-indikator">Indikator Kinerja / Jenis Layanan SPM</th>';
         html += '<th rowspan="2" class="h-satuan">SATUAN</th>';
-        html += '<th colspan="' + kec.length + '" class="h-kec-group">Indikator Pencapaian / Output Kecamatan</th>';
+        html += '<th colspan="12" class="h-kec-group">Indikator Pencapaian / Output Kecamatan</th>';
         html += '<th rowspan="2" class="h-total">TOTAL</th>';
         html += '</tr><tr>';
         kec.forEach(function (k) {
@@ -250,7 +255,8 @@ const SpmModal = {
                 html += '<td class="c-indikator">' + self.esc(row.indikator) + '</td>';
                 html += '<td class="c-satuan">' + self.esc(row.satuan || "") + '</td>';
                 kec.forEach(function (k) {
-                    html += '<td class="c-angka">' + self.fmt((row.targets || {})[k]) + '</td>';
+                    const tv = (row.targets || {})[k];
+                    html += '<td class="c-angka">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
                 });
                 html += '<td class="c-total">' + self.fmt(row.total) + '</td>';
                 html += '</tr>';
