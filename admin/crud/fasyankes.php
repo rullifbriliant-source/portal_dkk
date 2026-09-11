@@ -871,6 +871,9 @@ document.getElementById('importModal').onclick = function(e) {
     if (e.target === this) this.style.display = 'none';
 };
 </script>
+<!-- Notify tab Portal setelah mutasi fasyankes/kasur berhasil (?msg sukses) -->
+<script>window.PORTAL_NOTIFY_OK=["added","updated","deleted","import_done"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 
 </body>
 </html>

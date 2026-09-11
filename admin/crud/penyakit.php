@@ -290,6 +290,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         </table>
     </div>
 </div>
+<!-- Notify tab Portal setelah mutasi master penyakit berhasil (?msg sukses) -->
+<script>window.PORTAL_NOTIFY_OK=["added","updated","deleted"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 
 </body>
 </html>

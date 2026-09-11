@@ -1032,6 +1032,9 @@ document.getElementById('desaEditModal').onclick = function(e) {
     if (e.target === this) this.style.display = 'none';
 };
 </script>
+<!-- Notify tab Portal setelah mutasi kecamatan/desa berhasil (?msg sukses) -->
+<script>window.PORTAL_NOTIFY_OK=["added","updated","deleted","desa_added","desa_updated","desa_deleted","desa_restored","desa_imported"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 
 </body>
 </html>

@@ -240,6 +240,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <?php endif; ?>
     </div>
 </div>
+<!-- Notify tab Portal setelah nilai SDM per kecamatan tersimpan (?msg=saved) -->
+<script>window.PORTAL_NOTIFY_OK=["saved"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 
 </body>
 </html>

@@ -467,8 +467,18 @@ const MapEngine = {
     tooltip: null,
     pinned: false,
     bound: false,
+    initialized: false,
 
     init: function() {
+
+        // Guard: index.php inline (DOMContentLoaded) dan Startup.init
+        // sama-sama memanggil MapEngine.init. Tanpa guard, listener
+        // "district-click" terpasang 2x sehingga tiap klik map
+        // me-load district 2x (double fetch + double render).
+        if (this.initialized) {
+            return;
+        }
+        this.initialized = true;
 
         this.createTooltip();
 
@@ -580,10 +590,10 @@ const MapEngine = {
 
         const attachEvents = function(svg) {
 
-            if (!svg) return;
+            if (!svg) return false;
 
             if (svg.__mapEngineBound) {
-                return;
+                return true;
             }
 
 
@@ -598,7 +608,7 @@ const MapEngine = {
                     "Tidak ada .district di SVG"
                 );
 
-                return;
+                return false;
             }
 
 
@@ -860,6 +870,52 @@ const MapEngine = {
                 districts.length +
                 " district"
             );
+
+            return true;
+        };
+
+
+        // Dokumen SVG di dalam <object> di-parse bertahap: documentElement
+        // sudah ada padahal path district belum lengkap ("Menemukan 5
+        // district"). Tunggu sampai parse selesai + district ditemukan
+        // agar bind tidak berhenti di tengah jalan.
+        const isSvgReady = function(doc) {
+
+            if (
+                !doc ||
+                !doc.documentElement
+            ) {
+                return false;
+            }
+
+            try {
+                if (
+                    doc.readyState &&
+                    doc.readyState !== "complete"
+                ) {
+                    return false;
+                }
+            } catch (e) {
+                return false;
+            }
+
+            return doc.querySelectorAll(
+                ".district"
+            ).length > 0;
+        };
+
+
+        const tryAttach = function(doc) {
+
+            if (self.bound) {
+                return true;
+            }
+
+            if (!isSvgReady(doc)) {
+                return false;
+            }
+
+            return attachEvents(doc) === true;
         };
 
 
@@ -872,7 +928,7 @@ const MapEngine = {
             obj.contentDocument.documentElement
         ) {
 
-            attachEvents(
+            tryAttach(
                 obj.contentDocument
             );
 
@@ -889,7 +945,7 @@ const MapEngine = {
                                 obj.contentDocument
                             ) {
 
-                                attachEvents(
+                                tryAttach(
                                     obj.contentDocument
                                 );
                             }
@@ -903,7 +959,7 @@ const MapEngine = {
 
 
         /* ======================================================
-           RETRY
+           RETRY (berhenti hanya bila bind sukses / batas lewat)
         ====================================================== */
 
         let retry = 0;
@@ -917,7 +973,7 @@ const MapEngine = {
 
                     if (
                         self.bound ||
-                        retry > 20
+                        retry > 40
                     ) {
 
                         clearInterval(
@@ -939,21 +995,14 @@ const MapEngine = {
 
                     if (
                         obj2 &&
-                        obj2.contentDocument &&
-                        obj2.contentDocument.documentElement
+                        obj2.contentDocument
                     ) {
 
-                        const svg =
-                            obj2.contentDocument;
-
-
                         if (
-                            svg.querySelectorAll(
-                                ".district"
-                            ).length > 0
+                            tryAttach(
+                                obj2.contentDocument
+                            )
                         ) {
-
-                            attachEvents(svg);
 
                             clearInterval(
                                 interval
@@ -974,6 +1023,46 @@ const MapEngine = {
     onDistrictClick: function(e) {
 
         const data = e.detail;
+
+
+        // TOGGLE: klik kecamatan yang SAMA saat sudah dipilih
+        // → kembali ke agregat kabupaten (tanpa reload halaman).
+        // Klik kecamatan lain / klik pertama tetap load kecamatan.
+        // Berlaku umum untuk semua id district (tanpa hardcode nama).
+        if (
+            this.current !== null &&
+            this.current === data.id &&
+            typeof Dashboard !== "undefined" &&
+            Dashboard.currentDistrict !== null &&
+            Dashboard.resetToKabupaten
+        ) {
+
+            Log.info(
+                "Klik kecamatan yang sama:",
+                data.nama,
+                "→ kembali ke agregat kabupaten"
+            );
+
+
+            this.current = null;
+
+            this.pinned = false;
+
+            clearTimeout(
+                this.tooltip.timer
+            );
+
+            if (this.tooltip) {
+                this.tooltip.style.opacity =
+                    "0";
+            }
+
+            this.clearHighlight();
+
+            Dashboard.resetToKabupaten();
+
+            return;
+        }
 
 
         this.current =
@@ -1039,10 +1128,12 @@ const MapEngine = {
 
 
     /* ==========================================================
-       HIGHLIGHT DISTRICT
+       HAPUS HIGHLIGHT — kembalikan semua district ke style awal.
+       Dipakai saat toggle kembali ke agregat kabupaten.
+       Isi loop identik dengan reset di highlight() agar konsisten.
     ========================================================== */
 
-    highlight: function(id) {
+    clearHighlight: function() {
 
         const obj =
             DOM.id("svgInteractive") ||
@@ -1053,10 +1144,6 @@ const MapEngine = {
             !obj ||
             !obj.contentDocument
         ) {
-
-            Log.warn(
-                "SVG tidak tersedia untuk highlight"
-            );
 
             return;
         }
@@ -1109,11 +1196,14 @@ const MapEngine = {
                         child.style.opacity =
                             "";
 
+
                         child.style.filter =
                             "";
 
+
                         child.style.stroke =
                             "";
+
 
                         child.style.strokeWidth =
                             "";
@@ -1123,9 +1213,43 @@ const MapEngine = {
         );
 
 
+        Log.info(
+            "Highlight dibersihkan (kembali ke kabupaten)"
+        );
+    },
+
+
+    /* ==========================================================
+       HIGHLIGHT DISTRICT
+    ========================================================== */
+
+    highlight: function(id) {
+
+        const obj =
+            DOM.id("svgInteractive") ||
+            DOM.id("svgMap");
+
+
+        if (
+            !obj ||
+            !obj.contentDocument
+        ) {
+
+            Log.warn(
+                "SVG tidak tersedia untuk highlight"
+            );
+
+            return;
+        }
+        const svg =
+            obj.contentDocument;
+
+
+        this.clearHighlight();
+
+
         const aktif =
             svg.getElementById(id);
-
 
         if (!aktif) {
 
@@ -1818,6 +1942,7 @@ const Dashboard = {
 
     showOfflineKabupaten: function() {
         this.hideLoading();
+        this._resetNumCache();
         this.setText("namaKecamatan", "Kabupaten Sukoharjo");
         this.setText("jumlahPenduduk", "-");
         this.setText("jumlahKK", "-");
@@ -1861,6 +1986,10 @@ const Dashboard = {
             cleanId = nameMapping[cleanId];
         }
 
+        // TEST 10: bila fetch gagal, currentDistrict harus kembali ke
+        // state semula (data tampil memakai lastData via showOffline).
+        var prevDistrict = this.currentDistrict;
+
         this.currentDistrict = cleanId;
         this.showLoading();
 
@@ -1881,6 +2010,11 @@ const Dashboard = {
             })
             .catch(function(err) {
                 Log.error("Error load district:", err);
+                // Kembalikan state bila user belum pindah ke district lain
+                // selama fetch berjalan (tanpa infinite retry).
+                if (Dashboard.currentDistrict === cleanId) {
+                    Dashboard.currentDistrict = prevDistrict;
+                }
                 Dashboard.showOffline();
             });
     },
@@ -1898,7 +2032,7 @@ const Dashboard = {
         }
 
         if (json.status === false) {
-            if (json.data && json.data.length > 0) {
+            if (json.data && json.data.length > 0 && Dashboard.currentDistrict) {
                 var found = json.data.find(function(item) {
                     return item.nama_kecamatan &&
                         item.nama_kecamatan.toLowerCase() === Dashboard.currentDistrict.toLowerCase();
@@ -1907,6 +2041,13 @@ const Dashboard = {
                     this.renderData(found);
                     return;
                 }
+            }
+            // Gagal: selaraskan currentDistrict dengan data yang tampil
+            // (lastData) agar state tidak menggantung; tanpa retry.
+            if (this.lastData && this.lastData.nama) {
+                this.currentDistrict = (this.lastData.scope === "kabupaten")
+                    ? null
+                    : this.lastData.nama;
             }
             this.showOffline();
             return;
@@ -1979,6 +2120,7 @@ renderData: function(data) {
 
     showOffline: function() {
         this.hideLoading();
+        this._resetNumCache();
         if (this.lastData && this.lastData.nama) {
             this.renderData(this.lastData);
             return;
@@ -1999,8 +2141,140 @@ renderData: function(data) {
         }
     },
 
+    // Cache target angka per elemen: nilai yang sama tidak dianimasikan
+    // ulang (mencegah kedip saat auto-refresh/polling mendapatkan
+    // angka yang tidak berubah).
+    _numCache: {},
+
+    _resetNumCache: function() {
+        this._numCache = {};
+    },
+
 setNumber: function(id, value) {
-        Counter.start(id, value);
+        var target = parseInt(value, 10) || 0;
+        if (this._numCache[id] === target) {
+            return;
+        }
+        this._numCache[id] = target;
+        Counter.start(id, target);
+    }
+};
+
+/* ==========================================================
+   PORTAL SYNC — AUTO UPDATE DATA TANPA RELOAD HALAMAN
+   - Event antar-tab dari halaman admin (BroadcastChannel +
+     localStorage 'storage' event, dengan dedupe).
+   - Polling fallback ringan tiap 10 detik, hanya saat tab visible.
+   - Refresh memakai fungsi existing: loadKabupaten() bila
+     currentDistrict === null, loadDistrict(currentDistrict) bila
+     sedang di kecamatan. currentDistrict TIDAK diubah.
+   - Portal TIDAK pernah memancarkan event data-updated
+     (tidak ada loop). TIDAK ada reload halaman paksa.
+========================================================== */
+
+const PortalSync = {
+    channel: "portal_dkk_data_updated",
+    pollMs: 10000,
+    minGapMs: 8000,
+    lastEvent: 0,
+    lastRefresh: 0,
+    refreshing: false,
+    timer: null,
+    bc: null,
+
+    init: function() {
+        var self = this;
+
+        try {
+            if (typeof BroadcastChannel !== "undefined") {
+                this.bc = new BroadcastChannel(this.channel);
+                this.bc.onmessage = function(ev) {
+                    self.onEvent(ev && ev.data);
+                };
+            }
+        } catch (e) {
+            this.bc = null;
+        }
+
+        window.addEventListener("storage", function(e) {
+            if (e.key === self.channel) {
+                self.onEvent(self.parse(e.newValue));
+            }
+        });
+
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === "visible") {
+                self.refreshSoon("visible");
+            }
+        });
+
+        this.timer = setInterval(function() {
+            if (document.visibilityState === "visible") {
+                self.refreshSoon("poll");
+            }
+        }, this.pollMs);
+
+        Log.info("PortalSync Ready (event + polling 10s, visible-only)");
+    },
+
+    parse: function(raw) {
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    onEvent: function(data) {
+        if (!data || data.type !== "data-updated") {
+            return;
+        }
+        var now = Date.now();
+        // BroadcastChannel + storage bisa datang berpasangan
+        // untuk 1x save admin → abaikan duplikat < 2 detik.
+        if (now - this.lastEvent < 2000) {
+            return;
+        }
+        this.lastEvent = now;
+        Log.info("PortalSync: event data-updated diterima", data);
+        this.refreshSoon("event");
+    },
+
+    refreshSoon: function(reason) {
+        if (typeof Dashboard === "undefined") {
+            return;
+        }
+        // Guard duplikasi: event + polling yang hampir bersamaan
+        // tidak boleh membuat request ganda.
+        if (this.refreshing) {
+            return;
+        }
+        var now = Date.now();
+        if (now - this.lastRefresh < this.minGapMs) {
+            return;
+        }
+        this.refreshing = true;
+        this.lastRefresh = now;
+
+        try {
+            if (Dashboard.currentDistrict) {
+                Log.info("PortalSync: refresh kecamatan (" + reason + "):", Dashboard.currentDistrict);
+                Dashboard.loadDistrict(Dashboard.currentDistrict);
+            } else {
+                Log.info("PortalSync: refresh agregat kabupaten (" + reason + ")");
+                Dashboard.loadKabupaten();
+            }
+        } catch (e) {
+            Log.error("PortalSync refresh gagal:", e);
+        }
+
+        // Lepas guard setelah fetch sempat berjalan; Dashboard.render
+        // menangani error API tanpa merusak state tampil (showOffline
+        // memakai lastData, tidak reset currentDistrict).
+        var self = this;
+        setTimeout(function() {
+            self.refreshing = false;
+        }, 2000);
     }
 };
 
@@ -2940,6 +3214,7 @@ const Startup = {
         Dashboard.init();
         PortalAPI.init();
         PortalAPI.loadFasyankes();
+        PortalSync.init();
         FasyankesModal.init();
         SdmModal.init();
         PendudukModal.init();

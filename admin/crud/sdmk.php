@@ -1062,6 +1062,8 @@ document.querySelectorAll('.edit-btn').forEach(b=>b.onclick=function(){
   switchTab('items');
 });
 document.getElementById('editModal').onclick=function(e){if(e.target===this)this.style.display='none'}
-</script>
+</script><!-- Notify tab Portal setelah mutasi SDM berhasil (?msg sukses) -->
+<script>window.PORTAL_NOTIFY_OK=["added","updated","deleted","saved","saved_warn","reset","reset_row","import_done"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 </body>
 </html>

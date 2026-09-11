@@ -204,6 +204,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         </form>
     </div>
 </div>
+<!-- Notify tab Portal setelah nilai penyakit per kecamatan tersimpan (?msg=saved) -->
+<script>window.PORTAL_NOTIFY_OK=["saved"];</script>
+<script src="../assetsadmin/portal-notify.js"></script>
 
 </body>
 </html>     
