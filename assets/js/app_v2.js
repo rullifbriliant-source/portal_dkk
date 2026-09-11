@@ -1768,6 +1768,56 @@ const Dashboard = {
     },
 
     loadDefault: function() {
+        // STATE AWAL = AGREGAT KABUPATEN (bukan "-").
+        // Placeholder dulu, lalu timpa dengan angka riil dari API.
+        this.setText("namaKecamatan", "Memuat...");
+        this.setText("jumlahPenduduk", "-");
+        this.setText("jumlahKK", "-");
+        this.setText("jumlahPuskesmas", "-");
+        this.setText("jumlahPustu", "-");
+        this.setText("jumlahPosyandu", "-");
+        this.setText("jumlahDesa", "-");
+        this.loadKabupaten();
+    },
+
+    /* ==========================================================
+       AGREGAT KABUPATEN — state awal & state reset.
+       currentDistrict = null → render total seluruh kabupaten.
+       Dipakai saat portal pertama dibuka dan saat kembali ke
+       kondisi awal (mis. reload / resetToKabupaten).
+    ========================================================== */
+
+    loadKabupaten: function() {
+        this.currentDistrict = null;
+
+        var url = "api/kecamatan.php?aggregate=kabupaten&ts=" + Date.now();
+
+        Log.info("Load agregat kabupaten:", url);
+
+        fetch(url, { cache: "no-store" })
+            .then(function(res) {
+                if (!res.ok) {
+                    throw new Error("HTTP " + res.status);
+                }
+                return res.json();
+            })
+            .then(function(json) {
+                Log.info("Data agregat kabupaten:", json);
+                Dashboard.render(json);
+            })
+            .catch(function(err) {
+                Log.error("Error load agregat kabupaten:", err);
+                Dashboard.showOfflineKabupaten();
+            });
+    },
+
+    // Kembali ke kondisi awal (agregat kabupaten).
+    resetToKabupaten: function() {
+        this.loadKabupaten();
+    },
+
+    showOfflineKabupaten: function() {
+        this.hideLoading();
         this.setText("namaKecamatan", "Kabupaten Sukoharjo");
         this.setText("jumlahPenduduk", "-");
         this.setText("jumlahKK", "-");
@@ -1887,21 +1937,34 @@ renderData: function(data) {
 
        this.lastData = d;
 
+    // STATE AGREGAT (scope kabupaten): jangan picu reload per-kecamatan
+    // (Penduduk P1 / Penyakit / SDM) — data kabupaten sudah dimuat sekali
+    // oleh PortalAPI.init + PendudukCard.refresh. Reload dengan
+    // nama="12 Kecamatan" justru akan merusak panel tersebut
+    // (get_penyakit_populer.php selalu status:true berisi angka 0).
+    var isKabupaten = (data && data.scope === "kabupaten");
+
     // ===== PENDUDUK RESMI P1: override Data Dasar (hanya Penduduk) =====
     // Item Data Dasar lain (desa/puskesmas/pustu/posyandu) tidak diubah.
+    // Hanya untuk state kecamatan; agregat kabupaten sudah memakai
+    // SUM(tbl_desa_kelurahan) langsung dari API sehingga tidak di-override.
     var namaKecP1 = d.nama || d.nama_kecamatan;
-    if (namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
+    if (!isKabupaten && namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
         PendudukCard.refreshDistrict(namaKecP1);
     }
 
     // ===== PANGGIL PENYAKIT PER KECAMATAN =====
+    // Hanya untuk state kecamatan; state agregat memakai Top 10 + orbit
+    // kabupaten yang sudah dimuat PortalAPI.init.
     var namaKec = d.nama || d.nama_kecamatan;
-    if (namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
+    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
         PortalAPI.loadPenyakit(namaKec);
     }
 
     // ===== SDM KESEHATAN =====
-    if (namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
+    // Hanya untuk state kecamatan; state agregat memakai total kabupaten
+    // yang sudah dimuat PortalAPI.init.
+    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
         PortalAPI.loadSdm(namaKec);
     }
 },
