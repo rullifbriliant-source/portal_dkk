@@ -173,7 +173,10 @@ table.spm-table {
 
 .spm-table thead th.h-kec-group {
     white-space: normal;
-    min-width: 960px;
+    min-width: 1200px;
+}
+.spm-table thead th.h-total-group {
+    white-space: nowrap;
 }
 
 .spm-table thead tr:nth-child(2) th {
@@ -182,16 +185,30 @@ table.spm-table {
     color: #000;
     z-index: 5;
 }
+.spm-table thead tr:nth-child(3) th {
+    top: 66px;
+    background: #FFD966;
+    color: #000;
+    z-index: 5;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+.spm-table thead th.h-target, .spm-table thead th.h-realisasi {
+    background: #FFD966;
+}
 
 .spm-table th.h-no, .spm-table td.c-no { min-width: 44px; }
-.spm-table th.h-layanan, .spm-table td.c-layanan { min-width: 200px; max-width: 260px; }
+.spm-table th.h-layanan, .spm-table td.c-layanan { min-width: 180px; max-width: 220px; }
 .spm-table th.h-indikator { min-width: 370px; }
 .spm-table td.c-sub { min-width: 50px; }
 .spm-table td.c-sub[colspan="2"] { min-width: 370px; }
 .spm-table td.c-indikator { min-width: 320px; max-width: 420px; }
 .spm-table th.h-satuan, .spm-table td.c-satuan { min-width: 90px; }
-.spm-table th.h-kec, .spm-table td.c-angka { min-width: 80px; }
-.spm-table th.h-total, .spm-table td.c-total { min-width: 90px; }
+.spm-table th.h-kec, .spm-table td.c-angka { min-width: 70px; }
+.spm-table th.h-total, .spm-table th.h-total-group, .spm-table td.c-total { min-width: 80px; }
+.spm-table td.c-realisasi { background: #FFF2CC; }
+.spm-table td.c-total-realisasi { background: #FFE699; }
+.spm-table td.c-target { background: #fff; }
 
 /* Body putih seperti Excel */
 .spm-table tbody td {
