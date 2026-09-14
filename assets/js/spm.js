@@ -187,24 +187,29 @@ const SpmModal = {
             return;
         }
 
-        // Header meniru Excel: No | Jenis Layanan SPM | [Indikator Kinerja / Jenis Layanan SPM (C+D)] |
-        // SATUAN | [Indikator Pencapaian / Output Kecamatan (12 kec)] | TOTAL. Tanpa kolom Sasaran.
-        // FIX: colgroup 18 kolom (No 44 + Layanan 260 + Sub 50 + Indikator 320 + Satuan 110 + 12*Kec 80-110 + Total 90) agar browser tidak salah letak header baris kedua.
+        // Header bertingkat Realisasi SPM: setiap kecamatan = 2 kolom TARGET | REALISASI, TOTAL = 2 kolom TARGET | REALISASI
+        // Struktur 3 baris: Row1 grup utama, Row2 nama kecamatan (colspan2), Row3 TARGET/REALISASI
         let html = '<table class="spm-table"><colgroup>';
-        html += '<col style="width:44px"><col style="width:260px"><col style="width:50px"><col style="width:320px"><col style="width:110px">';
-        for (let i = 0; i < 12; i++) html += '<col style="width:90px">';
-        html += '<col style="width:90px">';
+        html += '<col style="width:44px"><col style="width:220px"><col style="width:50px"><col style="width:320px"><col style="width:90px">';
+        for (let i = 0; i < 24; i++) html += '<col style="width:72px">';
+        html += '<col style="width:80px"><col style="width:80px">';
         html += '</colgroup><thead><tr>';
-        html += '<th rowspan="2" class="h-no">No</th>';
-        html += '<th rowspan="2" class="h-layanan">Jenis Layanan SPM</th>';
-        html += '<th colspan="2" rowspan="2" class="h-indikator">Indikator Kinerja / Jenis Layanan SPM</th>';
-        html += '<th rowspan="2" class="h-satuan">SATUAN</th>';
-        html += '<th colspan="12" class="h-kec-group">Indikator Pencapaian / Output Kecamatan</th>';
-        html += '<th rowspan="2" class="h-total">TOTAL</th>';
+        html += '<th rowspan="3" class="h-no">No</th>';
+        html += '<th rowspan="3" class="h-layanan">Jenis Layanan SPM</th>';
+        html += '<th colspan="2" rowspan="3" class="h-indikator">Indikator Kinerja / Jenis Layanan SPM</th>';
+        html += '<th rowspan="3" class="h-satuan">SATUAN</th>';
+        html += '<th colspan="24" class="h-kec-group">Indikator Pencapaian / Output Kecamatan</th>';
+        html += '<th colspan="2" class="h-total-group">TOTAL</th>';
         html += '</tr><tr>';
         kec.forEach(function (k) {
-            html += '<th class="h-kec">' + SpmModal.esc(k) + '</th>';
+            html += '<th colspan="2" class="h-kec">' + SpmModal.esc(k) + '</th>';
         });
+        html += '<th colspan="2" class="h-total-ph" style="background:#FFC000;">TOTAL</th>';
+        html += '</tr><tr>';
+        kec.forEach(function () {
+            html += '<th class="h-target">TARGET</th><th class="h-realisasi">REALISASI</th>';
+        });
+        html += '<th class="h-target">TARGET</th><th class="h-realisasi">REALISASI</th>';
         html += '</tr></thead><tbody>';
 
         const self = this;
@@ -224,6 +229,9 @@ const SpmModal = {
                 startIdx = 1;
             }
             const pTargets = (p && p.targets) || {};
+            const pRealisasi = (p && p.realisasi) || {};
+            const pTotTarget = (p && (p.total_target !== undefined ? p.total_target : p.total));
+            const pTotReal = (p && p.total_realisasi);
             html += '<tr class="row-layanan">';
             html += '<td class="c-no">' + layNo + '</td>';
             html += '<td class="c-layanan">' + self.esc(layanan) + '</td>';
@@ -231,9 +239,12 @@ const SpmModal = {
             html += '<td class="c-satuan">' + self.esc((p && p.satuan) || "") + '</td>';
             kec.forEach(function (k) {
                 const tv = pTargets[k];
-                html += '<td class="c-angka">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
+                const rv = pRealisasi[k];
+                html += '<td class="c-angka c-target">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
+                html += '<td class="c-angka c-realisasi">' + ((rv === null || rv === undefined || rv === "") ? "" : self.fmt(rv)) + '</td>';
             });
-            html += '<td class="c-total">' + ((p && p.total !== null && p.total !== undefined && p.total !== "") ? self.fmt(p.total) : "") + '</td>';
+            html += '<td class="c-total c-total-target">' + ((pTotTarget !== null && pTotTarget !== undefined && pTotTarget !== "") ? self.fmt(pTotTarget) : "") + '</td>';
+            html += '<td class="c-total c-total-realisasi">' + ((pTotReal !== null && pTotReal !== undefined && pTotReal !== "") ? self.fmt(pTotReal) : "0") + '</td>';
             html += '</tr>';
             let num = 1;
             for (let i = startIdx; i < rows.length; i++) {
@@ -254,11 +265,18 @@ const SpmModal = {
                 html += '<td class="c-sub">' + self.esc(subNo) + '</td>';
                 html += '<td class="c-indikator">' + self.esc(row.indikator) + '</td>';
                 html += '<td class="c-satuan">' + self.esc(row.satuan || "") + '</td>';
+                const rTgt = row.targets || {};
+                const rReal = row.realisasi || {};
                 kec.forEach(function (k) {
-                    const tv = (row.targets || {})[k];
-                    html += '<td class="c-angka">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
+                    const tv = rTgt[k];
+                    const rv = rReal[k];
+                    html += '<td class="c-angka c-target">' + ((tv === null || tv === undefined || tv === "") ? "" : self.fmt(tv)) + '</td>';
+                    html += '<td class="c-angka c-realisasi">' + ((rv === null || rv === undefined || rv === "") ? "" : self.fmt(rv)) + '</td>';
                 });
-                html += '<td class="c-total">' + self.fmt(row.total) + '</td>';
+                const tTgt = (row.total_target !== undefined ? row.total_target : row.total);
+                const tReal = row.total_realisasi;
+                html += '<td class="c-total c-total-target">' + self.fmt(tTgt) + '</td>';
+                html += '<td class="c-total c-total-realisasi">' + self.fmt(tReal) + '</td>';
                 html += '</tr>';
                 num++;
             }

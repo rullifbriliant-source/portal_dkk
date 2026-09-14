@@ -456,7 +456,10 @@ if (mysqli_num_rows($checkSpm) > 0) {
                         <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data SPM</td></tr>
                     <?php endif; ?>
                 </table>
-                <a href="crud/spm.php" class="btn-edit"><i class="fas fa-external-link-alt"></i> Kelola SPM</a>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="crud/spm.php" class="btn-edit"><i class="fas fa-bullseye"></i> Kelola Target</a>
+                    <a href="crud/spm_realisasi.php" class="btn-edit" style="background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.25);color:#ffd966;"><i class="fas fa-chart-line"></i> Kelola Realisasi</a>
+                </div>
             </div>
 
             <!-- 6. INFORMASI PORTAL -->
