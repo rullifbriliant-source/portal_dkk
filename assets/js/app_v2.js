@@ -2746,6 +2746,23 @@ const SdmModal = {
     currentKecamatan: null,
     data: null,
     activeJenis: "Semua",
+    isKabupaten: false,
+
+    // Nama agregat "N Kecamatan" (N = COUNT tbl_kecamatan, dinamis mengikuti
+    // api/kecamatan.php) — BUKAN nama kecamatan asli.
+    isAggregateName: function(nm){
+        return /^\d+\s*kecamatan$/i.test(String(nm == null ? "" : nm).trim());
+    },
+
+    // State agregat kabupaten (belum pilih kecamatan di peta). Indikator sama
+    // dengan guard isKabupaten di Dashboard.renderData: scope==="kabupaten",
+    // dengan fallback pola nama "N Kecamatan".
+    isKabupatenState: function(){
+        if (typeof Dashboard === "undefined" || !Dashboard.lastData) return false;
+        if (Dashboard.currentDistrict) return false; // kecamatan konkret sedang aktif/dimuat
+        if (Dashboard.lastData.scope === "kabupaten") return true;
+        return SdmModal.isAggregateName(Dashboard.lastData.nama);
+    },
 
     init: function() {
         const appSdm = DOM.id("appSdm");
@@ -2769,8 +2786,23 @@ const SdmModal = {
     open: function() {
         const modal = DOM.id("sdmModal");
         if (!modal) return;
+        // STATE AGREGAT kabupaten: jangan perlakukan "N Kecamatan" sebagai nama
+        // kecamatan untuk di-query ke api/get_sdm.php (akan jatuh ke default
+        // kabupaten: total terisi tapi tanpa rincian faskes → "0 faskes"/"di .").
+        if (SdmModal.isKabupatenState()) {
+            modal.classList.add("show");
+            const appKab = DOM.id("appSdm");
+            if (appKab) appKab.classList.add("active");
+            this.currentKecamatan = null;
+            this.isKabupaten = true;
+            this.setTitle("SDM — Kabupaten Sukoharjo");
+            this.showLoading();
+            this.loadKabupaten();
+            return;
+        }
+        this.isKabupaten = false;
         let kecamatan = null;
-        if (typeof Dashboard!=="undefined" && Dashboard.lastData && Dashboard.lastData.nama) kecamatan = Dashboard.lastData.nama;
+        if (typeof Dashboard!=="undefined" && Dashboard.lastData && Dashboard.lastData.nama && !SdmModal.isAggregateName(Dashboard.lastData.nama)) kecamatan = Dashboard.lastData.nama;
         else if (typeof Dashboard!=="undefined" && Dashboard.currentDistrict) kecamatan = Dashboard.currentDistrict;
         else if (typeof MapEngine!=="undefined" && MapEngine.current) kecamatan = MapEngine.current;
 
@@ -2825,6 +2857,31 @@ const SdmModal = {
         }).catch(function(err){ Log.error("Gagal load SDM modal",err); SdmModal.renderError(); });
     },
 
+    // Mode kabupaten: tanpa param kecamatan → cabang default get_sdm.php
+    // (total kabupaten yang valid). Rincian per faskes memang tidak relevan
+    // di level ini — tampilkan ringkasan + ajakan pilih kecamatan.
+    loadKabupaten: function(){
+        const url="api/get_sdm.php?ts="+Date.now();
+        fetch(url,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(function(json){
+            if(json.status){
+                SdmModal.data=json;
+                SdmModal.activeJenis="Semua";
+                if(json.kecamatan == null) json.kecamatan="Kabupaten Sukoharjo";
+                SdmModal.renderSummary(json);
+                SdmModal.renderKabNotice();
+            } else { SdmModal.renderEmpty("Data tidak ditemukan."); }
+        }).catch(function(err){ Log.error("Gagal load SDM kabupaten",err); SdmModal.renderError(); });
+    },
+
+    // Pengganti filter+daftar per-faskes saat mode kabupaten.
+    renderKabNotice: function(){
+        const f=DOM.id("sdmFilters");
+        if(f) f.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,0.55);">Rincian per fasyankes tersedia setelah memilih kecamatan pada peta.</div>';
+        const list=DOM.id("sdmList");
+        if(list) list.innerHTML='<div class="faskes-empty"><i class="fas fa-map-marked-alt"></i><p>Pilih kecamatan pada peta untuk melihat rincian SDM per fasyankes.</p></div>';
+    },
+
     renderSummary: function(json){
         const el=DOM.id("sdmModalSummary"); if(!el) return;
         const total = json.total ?? 0;
@@ -2877,6 +2934,12 @@ const SdmModal = {
 
     renderFilters: function(json){
         const wrap=DOM.id("sdmFilters"); if(!wrap) return;
+        // Respons mode kabupaten (tanpa rincian faskes): jangan tampilkan
+        // dropdown "Semua (0 faskes)" yang membingungkan.
+        if(json.scope==="kabupaten" || (!json.faskes && json.kecamatan == null)){
+            SdmModal.renderKabNotice();
+            return;
+        }
         const jenisSet = {};
         (json.total_per_jenis||[]).forEach(function(p){ jenisSet[p.nama]=true; });
         const allJenis = Object.keys(jenisSet).sort();
@@ -2902,6 +2965,11 @@ const SdmModal = {
         const list=DOM.id("sdmList"); if(!list) return;
         const faskes=json.faskes||[];
         if(faskes.length===0){
+            // Respons mode kabupaten: pesan kontekstual, bukan "Belum ada data ... di .".
+            if(json.scope==="kabupaten" || json.kecamatan == null){
+                list.innerHTML='<div class="faskes-empty"><i class="fas fa-map-marked-alt"></i><p>Pilih kecamatan pada peta untuk melihat rincian SDM per fasyankes.</p></div>';
+                return;
+            }
             list.innerHTML='<div class="faskes-empty"><i class="fas fa-users"></i><p>Belum ada data SDM per fasyankes di '+this.escapeHtml(json.kecamatan||'')+'. Tambahkan di Admin → SDM → SDMK.</p></div>';
             return;
         }
