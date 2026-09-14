@@ -558,6 +558,7 @@ CREATE TABLE `tbl_sdm_items` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nama_item` varchar(100) NOT NULL,
   `kategori` enum('Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang') NOT NULL DEFAULT 'Tenaga Kesehatan',
+  `scope` varchar(50) NOT NULL DEFAULT '' COMMENT '''=semua jenis faskes; CSV subset {rs,puskesmas,lainnya}',
   `parent_id` int DEFAULT NULL,
   `id_parent` int DEFAULT NULL,
   `nilai` int DEFAULT '0',

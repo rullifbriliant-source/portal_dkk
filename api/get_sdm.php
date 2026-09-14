@@ -27,6 +27,55 @@ $hasSpTable = false;
 $chkTbl = @mysqli_query($config, "SHOW TABLES LIKE 'tbl_spesialis'");
 if ($chkTbl && mysqli_num_rows($chkTbl) > 0) $hasSpTable = true;
 
+// Deteksi kolom scope (pemisah struktur item per jenis faskes)
+$hasScopeCol = false;
+$chkScope = @mysqli_query($config, "SHOW COLUMNS FROM tbl_sdm_items LIKE 'scope'");
+if ($chkScope && mysqli_num_rows($chkScope) > 0) $hasScopeCol = true;
+function sdm_scope_for_jenis($jenis){
+    $j = strtolower(trim((string)$jenis));
+    if (strpos($j,'rumah sakit')!==false || $j==='rs' || strpos($j,'rsud')!==false) return 'rs';
+    if (strpos($j,'puskesmas')!==false) return 'puskesmas';
+    return 'lainnya';
+}
+// Peta include_in_total (aturan total resmi: sub-item tidak dihitung di
+// Total A; B/C dihitung semua — sama seperti computeTotals admin & JS rekap).
+// Tanpa ini portal double-count (induk + sub dijumlah semua).
+$hasIncCol = false;
+$chkInc = @mysqli_query($config, "SHOW COLUMNS FROM tbl_sdm_items LIKE 'include_in_total'");
+if ($chkInc && mysqli_num_rows($chkInc) > 0) $hasIncCol = true;
+$sdmIncMap = null;
+function sdm_include_map(){
+    global $config, $hasIncCol, $sdmIncMap;
+    if ($sdmIncMap !== null) return $sdmIncMap;
+    $sdmIncMap = [];
+    if (!$hasIncCol) return $sdmIncMap;
+    $q = @mysqli_query($config, "SELECT id, include_in_total FROM tbl_sdm_items");
+    while ($q && ($r = mysqli_fetch_assoc($q))) $sdmIncMap[(int)$r['id']] = (int)$r['include_in_total'];
+    return $sdmIncMap;
+}
+// Total resmi dari list item: A hanya include=1; B/C semua baris.
+function sdm_official_totals($items){
+    $inc = sdm_include_map();
+    $t = ['Tenaga Kesehatan'=>0,'Asisten Tenaga Kesehatan'=>0,'Tenaga Penunjang'=>0];
+    foreach ($items as $it) {
+        $k = $it['kategori'] ?? 'Tenaga Kesehatan';
+        if (!isset($t[$k])) $t[$k] = 0;
+        if ($k === 'Tenaga Kesehatan' && !empty($inc) && isset($inc[(int)($it['id'] ?? 0)]) && $inc[(int)$it['id']] === 0) continue;
+        $t[$k] += (int)($it['nilai'] ?? 0);
+    }
+    $t['grand'] = $t['Tenaga Kesehatan'] + $t['Asisten Tenaga Kesehatan'] + $t['Tenaga Penunjang'];
+    return $t;
+}
+// Fragment filter item per jenis faskes + union item yang sudah punya data
+// di faskes tsb (anti-hilang-data). $fid int, $alias alias tabel items.
+function sdm_scope_sql($jenis, $fid, $alias='si'){
+    global $hasScopeCol, $config;
+    if (!$hasScopeCol) return '';
+    $sc = sdm_scope_for_jenis($jenis);
+    $fid = (int)$fid;
+    return " AND ($alias.scope='' OR FIND_IN_SET('$sc',$alias.scope) OR $alias.id IN (SELECT id_profesi FROM tbl_sdm_faskes WHERE id_faskes=$fid AND aktif='Y'))";
+}
+
 // Resolve kecamatan
 // Helper kategori totals for frontend ringkasan (A/B/C)
 $kategoriLabels = ['Tenaga Kesehatan','Asisten Tenaga Kesehatan','Tenaga Penunjang'];
@@ -104,12 +153,18 @@ if ($id_kecamatan !== null) {
             $fid = (int)$f['id_faskes'];
             if ($id_faskes_filter && $fid !== $id_faskes_filter) continue;
             // per jenis untuk faskes ini — SUM agar spesialis teragregasi ke Dokter
+            // + filter scope jenis faskes (item RS tak tampil di Puskesmas dll).
             $perJenis = [];
-            $sqlPJ = "SELECT si.id, si.nama_item, si.kategori, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y' GROUP BY si.id, si.nama_item, si.kategori, si.urutan ORDER BY si.urutan";
+            $scopeFragPJ = sdm_scope_sql($f['jenis'] ?? '', $fid, 'si');
+            $sqlPJ = "SELECT si.id, si.nama_item, si.kategori, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y'$scopeFragPJ GROUP BY si.id, si.nama_item, si.kategori, si.urutan ORDER BY si.urutan";
             $qPJ = mysqli_query($config, $sqlPJ);
             $totalF = 0;
+            $incPJ = sdm_include_map();
             while ($pj = mysqli_fetch_assoc($qPJ)) {
                 $perJenis[] = ['id'=>(int)$pj['id'], 'nama'=>$pj['nama_item'], 'kategori'=>$pj['kategori'], 'nilai'=>(int)$pj['nilai']];
+                // Total resmi: sub-item (include=0) tidak dihitung
+                $kPJ = $pj['kategori'] ?? 'Tenaga Kesehatan';
+                if ($kPJ === 'Tenaga Kesehatan' && !empty($incPJ) && isset($incPJ[(int)$pj['id']]) && $incPJ[(int)$pj['id']] === 0) continue;
                 $totalF += (int)$pj['nilai'];
             }
             // per spesialis untuk faskes ini
@@ -130,10 +185,9 @@ if ($id_kecamatan !== null) {
                 'per_spesialis'=>$perSpesialis
             ];
         }
-        $total = array_sum(array_column($items, 'nilai'));
-        // Hitung kategori totals untuk ringkas modal
-        $katTotals = ['Tenaga Kesehatan'=>0,'Asisten Tenaga Kesehatan'=>0,'Tenaga Penunjang'=>0];
-        foreach($items as $it){ $k=$it['kategori'] ?? 'Tenaga Kesehatan'; if(isset($katTotals[$k])) $katTotals[$k]+=(int)$it['nilai']; else $katTotals[$k]=(int)$it['nilai']; }
+        // Total resmi (tanpa double-count sub-item) — sinkron dgn admin
+        $katTotals = sdm_official_totals($items);
+        $total = $katTotals['grand'];
         // Hitung belum_ditentukan: selisih tbl_sdm yang id_faskes NULL? untuk info
         $belum = 0;
         $qBelum = mysqli_query($config, "SELECT COUNT(*) c FROM tbl_sdm WHERE id_kecamatan=$id_kecamatan AND id_faskes IS NULL AND aktif='Y'");
@@ -194,9 +248,11 @@ if ($id_kecamatan !== null) {
     $qf = mysqli_query($config, "SELECT f.id_faskes, f.nama_faskes, f.jenis, f.id_kecamatan, k.nama_kecamatan FROM tbl_faskes f LEFT JOIN tbl_kecamatan k ON k.id_kecamatan=f.id_kecamatan WHERE f.id_faskes=$fid AND f.aktif='Y' LIMIT 1");
     $frow = $qf ? mysqli_fetch_assoc($qf) : null;
     if ($frow) {
-        $sqlPJ = "SELECT si.id, si.nama_item, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y' GROUP BY si.id, si.nama_item, si.urutan ORDER BY si.urutan";
+        $scopeFragF = sdm_scope_sql($frow['jenis'] ?? '', $fid, 'si');
+        $sqlPJ = "SELECT si.id, si.nama_item, si.kategori, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_sdm_items si LEFT JOIN tbl_sdm_faskes sf ON sf.id_profesi=si.id AND sf.id_faskes=$fid AND sf.aktif='Y' WHERE si.aktif='Y'$scopeFragF GROUP BY si.id, si.nama_item, si.kategori, si.urutan ORDER BY si.urutan";
         $qPJ = mysqli_query($config, $sqlPJ);
-        while ($pj = mysqli_fetch_assoc($qPJ)) $items[] = ['id'=>(int)$pj['id'],'nama'=>$pj['nama_item'],'nilai'=>(int)$pj['nilai']];
+        while ($pj = mysqli_fetch_assoc($qPJ)) $items[] = ['id'=>(int)$pj['id'],'nama'=>$pj['nama_item'],'kategori'=>$pj['kategori'],'nilai'=>(int)$pj['nilai']];
+        $katTotalsF = sdm_official_totals($items);
         // spesialis untuk faskes ini
         $spFaskes = [];
         if ($hasSpesialisCol && $hasSpTable) {
@@ -210,13 +266,14 @@ if ($id_kecamatan !== null) {
             "id_kecamatan"=>(int)$frow['id_kecamatan'],
             "filter_faskes"=>$fid,
             "data"=>$items,
-            "total"=>array_sum(array_column($items,'nilai')),
+            "total"=>$katTotalsF['grand'],
             "total_per_jenis"=>$items,
+            "kategori_totals"=>['Tenaga Kesehatan'=>$katTotalsF['Tenaga Kesehatan'],'Asisten Tenaga Kesehatan'=>$katTotalsF['Asisten Tenaga Kesehatan'],'Tenaga Penunjang'=>$katTotalsF['Tenaga Penunjang']],
             "faskes"=>[[
                 'id_faskes'=>$fid,
                 'nama_faskes'=>$frow['nama_faskes'],
                 'jenis'=>$frow['jenis'],
-                'total'=>array_sum(array_column($items,'nilai')),
+                'total'=>$katTotalsF['grand'],
                 'per_jenis'=>array_map(function($x){return ['nama'=>$x['nama'],'nilai'=>$x['nilai']];}, $items),
                 'per_spesialis'=>$spFaskes
             ]],
@@ -232,7 +289,7 @@ if ($id_kecamatan !== null) {
 // Kabupaten total = SUM( per kecamatan: jika ada data faskes → SUM faskes, else SUM kecamatan ) → berkorelasi
 $items = [];
 $hybridSql = "
-    SELECT si.id, si.nama_item, si.urutan,
+    SELECT si.id, si.nama_item, si.kategori, si.urutan,
            COALESCE(sf2.sf_total,0) + COALESCE(sk2.sk_total,0) AS nilai
     FROM tbl_sdm_items si
     LEFT JOIN (
@@ -252,21 +309,22 @@ if ($qHybrid) {
     while ($row = mysqli_fetch_assoc($qHybrid)) {
         $val = (int)$row['nilai'];
         if ($val > 0) $hybridHasData = true;
-        $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'nilai'=>$val];
+        $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'kategori'=>$row['kategori'],'nilai'=>$val];
     }
 }
 // Fallback ke legacy tbl_sdm_items.nilai jika hybrid masih 0 semua (belum ada data kecamatan/faskes)
 if (!$hybridHasData) {
     $items = [];
-    $sqlLegacy = "SELECT id, nama_item, nilai FROM tbl_sdm_items WHERE aktif='Y' ORDER BY urutan";
+    $sqlLegacy = "SELECT id, nama_item, kategori, nilai FROM tbl_sdm_items WHERE aktif='Y' ORDER BY urutan";
     $qLeg = mysqli_query($config, $sqlLegacy);
-    while ($row = mysqli_fetch_assoc($qLeg)) $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'nilai'=>(int)$row['nilai']];
+    while ($row = mysqli_fetch_assoc($qLeg)) $items[] = ['id'=>(int)$row['id'],'nama'=>$row['nama_item'],'kategori'=>$row['kategori'],'nilai'=>(int)$row['nilai']];
     $sourceKab = "tbl_sdm_items_legacy";
 } else {
     $sourceKab = "correlated_hybrid";
 }
 if (count($items)>0) {
-    $respAll = ["status"=>true,"kecamatan"=>null,"data"=>$items,"total"=>array_sum(array_column($items,'nilai')),"total_per_jenis"=>$items,"source"=>$sourceKab];
+    $katKab = sdm_official_totals($items);
+    $respAll = ["status"=>true,"scope"=>"kabupaten","kecamatan"=>null,"data"=>$items,"total"=>$katKab['grand'],"total_per_jenis"=>$items,"kategori_totals"=>['Tenaga Kesehatan'=>$katKab['Tenaga Kesehatan'],'Asisten Tenaga Kesehatan'=>$katKab['Asisten Tenaga Kesehatan'],'Tenaga Penunjang'=>$katKab['Tenaga Penunjang']],"source"=>$sourceKab];
     if ($hasSpesialisCol && $hasSpTable) {
         $qSpAll = mysqli_query($config, "SELECT sp.id, sp.nama_spesialis, sp.kode, COALESCE(SUM(sf.jumlah),0) AS nilai FROM tbl_spesialis sp LEFT JOIN tbl_sdm_faskes sf ON sf.id_spesialis=sp.id AND sf.aktif='Y' WHERE sp.aktif='Y' GROUP BY sp.id, sp.nama_spesialis, sp.kode, sp.urutan HAVING nilai>0 ORDER BY sp.urutan");
         $spAll = [];
@@ -275,5 +333,5 @@ if (count($items)>0) {
     }
     echo json_encode($respAll);
 } else {
-    echo json_encode(["status"=>true,"kecamatan"=>null,"data"=>[['nama'=>'Dokter','nilai'=>0],['nama'=>'Perawat','nilai'=>0],['nama'=>'Bidan','nilai'=>0],['nama'=>'Nakes Lainnya','nilai'=>0]]]);
+    echo json_encode(["status"=>true,"scope"=>"kabupaten","kecamatan"=>null,"data"=>[['nama'=>'Dokter','nilai'=>0],['nama'=>'Perawat','nilai'=>0],['nama'=>'Bidan','nilai'=>0],['nama'=>'Nakes Lainnya','nilai'=>0]]]);
 }
