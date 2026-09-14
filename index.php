@@ -45,6 +45,9 @@
 
     <div class="video-container">
 
+    <!-- EARTH BACKGROUND (dekoratif, di belakang seluruh UI & peta) -->
+    <div class="earth-bg" aria-hidden="true"></div>
+
     <video
         autoplay
         muted
@@ -285,6 +288,11 @@
 
                 </div>
 
+                <a class="gis-link"
+                    href="https://pisda.sukoharjokab.go.id/catalogue/#/all?filter%7Bowner.pk.in%7D=1005"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Buka Katalog GIS PISDA Sukoharjo (tab baru)">
                 <div>
 
                     <i class="fas fa-map-location-dot fa-2x"></i>
@@ -294,6 +302,7 @@
                     GIS
 
                 </div>
+                </a>
 
             </div>
 

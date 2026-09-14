@@ -207,7 +207,8 @@ body {
 .portal-feature {
     display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin-top:18px;
 }
-.portal-feature div {
+.portal-feature div,
+.portal-feature a.gis-link {
     padding:12px 6px; border-radius:16px; background:rgba(255,255,255,.05);
     transition:.30s; cursor:pointer; text-align:center;
     overflow:hidden; min-width:0;
@@ -216,13 +217,67 @@ body {
     font-size:clamp(10px, 0.85vw, 13px);
     white-space:nowrap; text-overflow:ellipsis;
 }
-.portal-feature div i {
+.portal-feature div i,
+.portal-feature a.gis-link i {
     font-size:clamp(16px, 1.4vw, 20px) !important;
     margin-bottom:6px;
 }
 .portal-feature div br { display:none; }
-.portal-feature div:hover {
+.portal-feature div:hover,
+.portal-feature a.gis-link:hover {
     background:rgba(0,212,255,.18); transform:translateY(-5px);
+}
+
+/* ==========================================================
+   GIS CARD LINK — samakan box dengan feature lain sekaligus
+   kunci warna tema Portal DKK (cyan/teal) agar tidak kena
+   warna default browser (ungu) pada <a> / :visited / :hover.
+   Scoped ke .gis-link agar tidak memengaruhi card lain.
+========================================================== */
+.gis-link,
+.gis-link:visited,
+.gis-link:hover,
+.gis-link:active {
+    color:inherit;
+    text-decoration:none;
+}
+/* Inner div ikut mewarisi box dari <a>, jangan double-card */
+.portal-feature a.gis-link > div {
+    padding:0;
+    background:transparent;
+    border-radius:0;
+    min-height:0;
+    overflow:visible;
+    transition:none;
+    transform:none;
+    cursor:inherit;
+}
+/* Teks GIS: putih seperti card lain (text node langsung di inner div,
+   mewarisi color dari <a>); icon GIS juga putih */
+.portal-feature a.gis-link,
+.portal-feature a.gis-link:visited {
+    color:#fff;
+}
+.portal-feature a.gis-link i,
+.portal-feature a.gis-link:visited i {
+    color:#fff;
+}
+.portal-feature a.gis-link:hover {
+    color:#fff;
+    box-shadow:0 0 0 1px rgba(0,212,255,.35), 0 0 14px rgba(0,212,255,.18);
+}
+.portal-feature a.gis-link:hover i {
+    color:#fff;
+}
+.portal-feature a.gis-link:active {
+    color:#fff;
+}
+.portal-feature a.gis-link:active i {
+    color:#fff;
+}
+.portal-feature a.gis-link:focus-visible {
+    outline:2px solid rgba(0,212,255,.6);
+    outline-offset:3px;
 }
 
 .center-panel {
