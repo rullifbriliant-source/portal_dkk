@@ -175,10 +175,12 @@ class SpmLib
     }
 
     /**
-     * Ambil seluruh baris SPM satu periode beserta target 12 kecamatan.
+     * Ambil seluruh baris SPM satu periode beserta target 12 kecamatan + realisasi.
      * Return array rows: [id, jenis_layanan, sub_no, indikator, satuan, sasaran, tahun, periode,
-     *   urutan, total_manual, targets=>[KEC=>float], total=>float]
-     * TOTAL = total_manual bila diisi, selain itu SUM 12 kecamatan (mengikuti spreadsheet).
+     *   urutan, total_manual, targets=>[KEC=>float|null], realisasi=>[KEC=>float|null],
+     *   total=>float (alias total_target), total_target=>float, total_realisasi=>float, total_hitung=>float]
+     * TOTAL (target) = total_manual bila diisi, selain itu SUM 12 kecamatan (mengikuti spreadsheet).
+     * Realisasi terpisah di tbl_spm_realisasi, tidak pernah menimpa target.
      */
     public static function fetchData($db, $periode)
     {
@@ -199,7 +201,11 @@ class SpmLib
         $ids = [];
         while ($r = mysqli_fetch_assoc($q)) {
             $r['targets'] = [];
-            foreach ($orderedNames as $kn) $r['targets'][$kn] = null;
+            $r['realisasi'] = [];
+            foreach ($orderedNames as $kn) {
+                $r['targets'][$kn] = null;
+                $r['realisasi'][$kn] = null;
+            }
             $rows[(int)$r['id']] = $r;
             $ids[] = (int)$r['id'];
         }
@@ -218,16 +224,63 @@ class SpmLib
                     }
                 }
             }
+            // realisasi: tabel terpisah, tidak mengganggu target
+            $chk = mysqli_query($db, "SHOW TABLES LIKE 'tbl_spm_realisasi'");
+            if ($chk && mysqli_num_rows($chk) > 0) {
+                $qr = mysqli_query($db, "SELECT r.id_spm, r.id_kecamatan, r.realisasi, k.nama_kecamatan
+                    FROM tbl_spm_realisasi r JOIN tbl_kecamatan k ON k.id_kecamatan=r.id_kecamatan
+                    WHERE r.id_spm IN ($idList) AND r.aktif='Y'");
+                if ($qr) {
+                    while ($t = mysqli_fetch_assoc($qr)) {
+                        $sid = (int)$t['id_spm'];
+                        if (!isset($rows[$sid])) continue;
+                        $kn = self::normKec($t['nama_kecamatan']);
+                        if (array_key_exists($kn, $rows[$sid]['realisasi'])) {
+                            $rows[$sid]['realisasi'][$kn] = (float)$t['realisasi'];
+                        }
+                    }
+                }
+            }
         }
         foreach ($rows as &$r) {
-            $sum = array_sum(array_map(function ($v) { return $v === null || $v === '' ? 0 : (float)$v; }, $r['targets']));
-            $r['total'] = ($r['total_manual'] !== null && $r['total_manual'] !== '')
+            $sumTarget = array_sum(array_map(function ($v) { return $v === null || $v === '' ? 0 : (float)$v; }, $r['targets']));
+            $sumReal = array_sum(array_map(function ($v) { return $v === null || $v === '' ? 0 : (float)$v; }, $r['realisasi']));
+            $r['total_hitung'] = $sumTarget;
+            $r['total_target'] = ($r['total_manual'] !== null && $r['total_manual'] !== '')
                 ? (float)$r['total_manual']
-                : $sum;
-            $r['total_hitung'] = $sum;
+                : $sumTarget;
+            // backward compat: total = total_target
+            $r['total'] = $r['total_target'];
+            $r['total_realisasi'] = $sumReal;
+            // ensure keys exist
+            if (!isset($r['realisasi'])) $r['realisasi'] = [];
         }
         unset($r);
         return ['kecamatan' => $orderedNames, 'rows' => array_values($rows)];
+    }
+
+    /**
+     * Ambil realisasi untuk satu id_spm (helper untuk form edit).
+     * Return [KEC=>float|null]
+     */
+    public static function fetchRealisasi($db, $idSpm)
+    {
+        $kecMap = self::kecMap($db);
+        $orderedNames = [];
+        foreach (self::KEC_ORDER as $kn) {
+            if (isset($kecMap[$kn])) $orderedNames[] = $kn;
+        }
+        $out = [];
+        foreach ($orderedNames as $kn) $out[$kn] = null;
+        $id = (int)$idSpm;
+        $chk = mysqli_query($db, "SHOW TABLES LIKE 'tbl_spm_realisasi'");
+        if (!$chk || mysqli_num_rows($chk) === 0) return $out;
+        $q = mysqli_query($db, "SELECT k.nama_kecamatan, r.realisasi FROM tbl_spm_realisasi r JOIN tbl_kecamatan k ON k.id_kecamatan=r.id_kecamatan WHERE r.id_spm=$id AND r.aktif='Y'");
+        if ($q) while ($r = mysqli_fetch_assoc($q)) {
+            $kn = self::normKec($r['nama_kecamatan']);
+            if (array_key_exists($kn, $out)) $out[$kn] = (float)$r['realisasi'];
+        }
+        return $out;
     }
 
     /** Hitung jumlah baris aktif per periode (untuk badge/tab). */

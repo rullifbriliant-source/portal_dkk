@@ -413,7 +413,8 @@ $counts = SpmLib::counts($config);
         <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
-        <li><a href="spm.php" class="active"><i class="fas fa-chart-pie"></i> SPM</a></li>
+        <li><a href="spm.php" class="active"><i class="fas fa-chart-pie"></i> SPM Target</a></li>
+        <li><a href="spm_realisasi.php"><i class="fas fa-chart-line"></i> SPM Realisasi</a></li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
@@ -479,6 +480,7 @@ $counts = SpmLib::counts($config);
             <a class="btn btn-success" href="spm_export.php<?= $fPeriode !== '' ? '?periode=' . urlencode($fPeriode) : '' ?>"><i class="fas fa-file-export"></i> Export Excel</a>
             <a class="btn" href="spm_template.php"><i class="fas fa-file-download"></i> Download Template</a>
             <a class="btn btn-warn" href="spm_sasaran.php"><i class="fas fa-bullseye"></i> Kelola Sasaran</a>
+            <a class="btn" href="spm_realisasi.php" style="border-color:rgba(255,215,0,0.35);background:rgba(255,215,0,0.1);color:#ffd966;"><i class="fas fa-chart-line"></i> Realisasi SPM</a>
             <button type="button" class="btn btn-danger" id="btnHapusSemua" onclick="openDeleteAllModal()"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
         </div>
         <form method="POST" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
