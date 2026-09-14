@@ -319,7 +319,6 @@ if (mysqli_num_rows($checkSpm) > 0) {
                 <?php endif; ?>
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
                     <a href="crud/sdmk.php?tab=items" style="font-size:12px;color:#72e8ff;text-decoration:none"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Lihat rincian per jenis SDM →</a>
-                    <a href="crud/sdm.php" style="font-size:11px;color:rgba(255,255,255,0.3);text-decoration:none">SDM legacy</a>
                 </div>
             </div>
 
