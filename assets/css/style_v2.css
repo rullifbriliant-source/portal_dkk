@@ -679,6 +679,7 @@ body {
     transition:.25s; font-family:'Poppins',sans-serif;
 }
 .faskes-chip:hover { background:rgba(0,212,255,.2); }
+.faskes-chip i { margin-right:8px; }
 .faskes-chip.active {
     background:#00d4ff; color:#04182b; border-color:#00d4ff;
 }

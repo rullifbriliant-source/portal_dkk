@@ -1784,7 +1784,11 @@ renderOrbit: function(items) {
         Log.warn("Tidak ada data penyakit untuk orbit");
         return;
     }
-    // Mapping icon dinamis per penyakit (fallback generic)
+    // Mapping icon dinamis per penyakit (fallback generic).
+    // Catatan: 'fa-stomach' TIDAK dipakai karena icon tersebut hanya
+    // tersedia di Font Awesome Pro, sedangkan Portal memuat FA Free
+    // 6.6.0 (cdn) sehingga glyph-nya blank. Gastritis memakai 'fa-pills'
+    // yang tersedia di Free set (terverifikasi di all.min.css 6.6.0).
     var iconMap = {
         'jantung': 'fa-heart-pulse',
         'hipertensi': 'fa-heart-pulse',
@@ -1792,7 +1796,7 @@ renderOrbit: function(items) {
         'covid': 'fa-virus-covid',
         'ispa': 'fa-lungs-virus',
         'diare': 'fa-droplet',
-        'gastritis': 'fa-stomach',
+        'gastritis': 'fa-pills',
         'tbc': 'fa-syringe',
         'diabetes': 'fa-bone',
         'asma': 'fa-lungs',
@@ -2078,35 +2082,49 @@ renderData: function(data) {
 
        this.lastData = d;
 
-    // STATE AGREGAT (scope kabupaten): jangan picu reload per-kecamatan
-    // (Penduduk P1 / Penyakit / SDM) — data kabupaten sudah dimuat sekali
-    // oleh PortalAPI.init + PendudukCard.refresh. Reload dengan
-    // nama="12 Kecamatan" justru akan merusak panel tersebut
-    // (get_penyakit_populer.php selalu status:true berisi angka 0).
+    // STATE AGREGAT (scope kabupaten): muat ulang panel yang memiliki
+    // mode kabupaten (Penyakit Top 10 + orbit, SDM) dari API existing
+    // tanpa parameter kecamatan, agar kembali ke angka kabupaten setelah
+    // sebelumnya menampilkan data kecamatan (toggle kembali). Tanpa ini
+    // panel penyakit/SDM tertinggal menampilkan data kecamatan terakhir
+    // (bisa 0 semua bila kecamatan tersebut belum punya data).
     var isKabupaten = (data && data.scope === "kabupaten");
+
+    var namaKec = d.nama || d.nama_kecamatan;
+    // Label agregat ("12 Kecamatan") bukan kecamatan valid — jangan pernah
+    // dipakai sebagai parameter API (get_penyakit_populer.php selalu
+    // status:true berisi angka 0 untuk nama yang tidak cocok).
+    var isAgregatLabel = !!namaKec && (/^\d+\s+kecamatan$/i).test(namaKec);
 
     // ===== PENDUDUK RESMI P1: override Data Dasar (hanya Penduduk) =====
     // Item Data Dasar lain (desa/puskesmas/pustu/posyandu) tidak diubah.
     // Hanya untuk state kecamatan; agregat kabupaten sudah memakai
     // SUM(tbl_desa_kelurahan) langsung dari API sehingga tidak di-override.
-    var namaKecP1 = d.nama || d.nama_kecamatan;
-    if (!isKabupaten && namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
+    var namaKecP1 = namaKec;
+    if (!isKabupaten && !isAgregatLabel && namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
         PendudukCard.refreshDistrict(namaKecP1);
     }
 
-    // ===== PANGGIL PENYAKIT PER KECAMATAN =====
-    // Hanya untuk state kecamatan; state agregat memakai Top 10 + orbit
-    // kabupaten yang sudah dimuat PortalAPI.init.
-    var namaKec = d.nama || d.nama_kecamatan;
-    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
-        PortalAPI.loadPenyakit(namaKec);
+    // ===== PENYAKIT POPULER + ORBIT =====
+    // Kabupaten: reload agregat (Top 10 + orbit Top 6) via API existing.
+    // Kecamatan: reload per kecamatan.
+    if (typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
+        if (isKabupaten) {
+            PortalAPI.loadPenyakit();
+        } else if (namaKec && !isAgregatLabel) {
+            PortalAPI.loadPenyakit(namaKec);
+        }
     }
 
     // ===== SDM KESEHATAN =====
-    // Hanya untuk state kecamatan; state agregat memakai total kabupaten
-    // yang sudah dimuat PortalAPI.init.
-    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
-        PortalAPI.loadSdm(namaKec);
+    // Kabupaten: reload total kabupaten via API existing.
+    // Kecamatan: reload per kecamatan.
+    if (typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
+        if (isKabupaten) {
+            PortalAPI.loadSdm();
+        } else if (namaKec && !isAgregatLabel) {
+            PortalAPI.loadSdm(namaKec);
+        }
     }
 },
     showLoading: function() {
@@ -3089,6 +3107,25 @@ const PendudukModal = {
         this.kecId = 0;
         this.reqId++;
         this.showLoading();
+        // Kembalikan seluruh Portal ke agregat kabupaten memakai mekanisme
+        // existing (tanpa location.reload): bersihkan highlight/tooltip peta
+        // lalu muat ulang via Dashboard.resetToKabupaten() — Data Dasar,
+        // 10 Penyakit Populer, orbit, SDM, dan Penduduk ikut kembali ke
+        // angka kabupaten melalui alur renderData(scope=kabupaten).
+        if (typeof MapEngine !== "undefined") {
+            MapEngine.current = null;
+            MapEngine.pinned = false;
+            if (MapEngine.tooltip) {
+                clearTimeout(MapEngine.tooltip.timer);
+                MapEngine.tooltip.style.opacity = "0";
+            }
+            if (MapEngine.clearHighlight) {
+                MapEngine.clearHighlight();
+            }
+        }
+        if (typeof Dashboard !== "undefined" && Dashboard.resetToKabupaten) {
+            Dashboard.resetToKabupaten();
+        }
         this.load();
     },
 
@@ -3111,7 +3148,7 @@ const PendudukModal = {
             + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.laki_laki || 0) + '</div></div>';
         html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">PEREMPUAN</div>'
             + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.perempuan || 0) + '</div></div>';
-        html += '<div style="flex:1;min-width:140px;display:flex;align-items:center;"><button id="pendudukBackBtn" class="btn-icon" style="cursor:pointer;">← Kembali ke Kabupaten</button></div>';
+        html += '<div style="flex:1;min-width:140px;display:flex;align-items:center;"><button id="pendudukBackBtn" class="faskes-chip"><i class="fas fa-arrow-left"></i>Kembali ke Kabupaten</button></div>';
         sum.innerHTML = html;
         const backBtn = DOM.id("pendudukBackBtn");
         if (backBtn) backBtn.addEventListener("click", function(){ self.backToKab(); });
