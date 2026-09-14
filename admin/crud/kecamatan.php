@@ -630,6 +630,7 @@ $desaMsgErr = [
     <ul class="sidebar-menu">
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
+        <li><a href="faskes_rekap.php"><i class="fas fa-table"></i> Rekap Fasyankes</a></li>
         <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
         <li><a href="sdm.php"><i class="fas fa-users"></i> SDM</a></li>
         <li><a href="kecamatan.php" class="active"><i class="fas fa-map"></i> Kecamatan</a></li>

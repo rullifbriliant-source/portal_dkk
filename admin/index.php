@@ -105,6 +105,20 @@ if (mysqli_num_rows($checkPortal) > 0) {
     $dataPortal = mysqli_fetch_assoc($qPortal) ?? [];
 }
 
+// Ringkasan Rekap Fasyankes 2021–2025 (guarded: tabel belum ada bila migration Tahap 1 belum dijalankan)
+$rekapPerTahun = [];
+$rekapJenis = 0;
+$checkRekap = mysqli_query($config, "SHOW TABLES LIKE 'tbl_faskes_rekap'");
+if (mysqli_num_rows($checkRekap) > 0) {
+    $qRekap = mysqli_query($config, "SELECT tahun, COUNT(*) c, COUNT(DISTINCT jenis_sarana) j FROM tbl_faskes_rekap WHERE aktif='Y' GROUP BY tahun ORDER BY tahun");
+    if ($qRekap) {
+        while ($r = mysqli_fetch_assoc($qRekap)) {
+            $rekapPerTahun[(int)$r['tahun']] = ['baris' => (int)$r['c'], 'jenis' => (int)$r['j']];
+            $rekapJenis = max($rekapJenis, (int)$r['j']);
+        }
+    }
+}
+
 // Ringkasan SPM
 $spmCounts = [];
 $spmTotal = 0;
@@ -315,6 +329,33 @@ if (mysqli_num_rows($checkSpm) > 0) {
                     <?php endforeach; ?>
                 </table>
                 <a href="crud/fasyankes.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Fasyankes</a>
+            </div>
+
+            <!-- 1b. REKAP FASYANKES 2021–2025 (agregat kabupaten, tabel terpisah) -->
+            <div class="card-editor">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-table"></i>
+                        <div>
+                            <h3>Rekap Fasyankes</h3>
+                            <p>Agregat kabupaten 2021–2025</p>
+                        </div>
+                    </div>
+                    <span class="badge"><?= $rekapJenis ?> jenis</span>
+                </div>
+                <table>
+                    <?php if (!empty($rekapPerTahun)): ?>
+                        <?php foreach ($rekapPerTahun as $th => $rc): ?>
+                        <tr>
+                            <td><?= $th ?></td>
+                            <td><?= number_format($rc['jenis']) ?> jenis / <?= number_format($rc['baris']) ?> baris</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data rekap</td></tr>
+                    <?php endif; ?>
+                </table>
+                <a href="crud/faskes_rekap.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Rekap</a>
             </div>
 
             <!-- 2. SDM — DIRAPIKAN: ringkas per kategori, tombol langsung terlihat tanpa scroll -->
