@@ -90,6 +90,14 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
             top: 0;
             height: 100vh;
             overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        /* Sembunyikan scrollbar, sidebar tetap bisa scroll */
+        .sidebar::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
         }
         .sidebar-brand {
             display: flex;

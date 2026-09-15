@@ -66,7 +66,9 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Poppins',sans-serif; background:#061426; min-height:100vh; display:flex; color:#fff; }
-        .sidebar { width:260px; min-height:100vh; background:rgba(255,255,255,0.04); border-right:1px solid rgba(255,255,255,0.06); padding:30px 20px; flex-shrink:0; position:sticky; top:0; height:100vh; }
+        .sidebar { width:260px; min-height:100vh; background:rgba(255,255,255,0.04); border-right:1px solid rgba(255,255,255,0.06); padding:30px 20px; flex-shrink:0; position:sticky; top:0; height:100vh; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; }
+        /* Sembunyikan scrollbar, sidebar tetap bisa scroll */
+        .sidebar::-webkit-scrollbar { display:none; width:0; height:0; }
         .sidebar-brand { display:flex; align-items:center; gap:14px; padding-bottom:30px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:24px; }
         .sidebar-brand img { width:48px; height:48px; object-fit:contain; }
         .sidebar-brand h2 { color:#fff; font-size:16px; font-weight:700; }
