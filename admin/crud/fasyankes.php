@@ -392,6 +392,14 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         .sidebar-menu a:hover, .sidebar-menu a.active { background:rgba(0,212,255,0.12); color:#fff; }
         .sidebar-menu a i { width:20px; color:rgba(255,255,255,0.3); font-size:16px; }
         .sidebar-menu a.active i { color:#00d4ff; }
+        .sidebar-menu .menu-group {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.3);
+            padding: 14px 16px 6px;
+        }
         .sidebar-menu .logout { margin-top:30px; border-top:1px solid rgba(255,255,255,0.06); padding-top:20px; }
         .sidebar-menu .logout a { color:rgba(255,82,82,0.7); }
         .sidebar-menu .logout a:hover { background:rgba(255,82,82,0.12); color:#ff6b6b; }
@@ -492,14 +500,22 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
     </div>
     <ul class="sidebar-menu">
+        <li class="menu-group">Utama</li>
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li class="menu-group">Fasyankes</li>
         <li><a href="fasyankes.php" class="active"><i class="fas fa-hospital"></i> Fasyankes</a></li>
         <li><a href="faskes_rekap.php"><i class="fas fa-table"></i> Rekap Fasyankes</a></li>
+        <li class="menu-group">SDM Kesehatan</li>
         <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
+        <li><a href="sdmk_kecamatan_rekap.php"><i class="fas fa-chart-bar"></i> Rekap SDMK</a></li>
+        <li><a href="spesialis.php"><i class="fas fa-user-doctor"></i> Spesialis Dokter</a></li>
+        <li class="menu-group">Wilayah &amp; Data Lain</li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li class="menu-group">SPM</li>
         <li><a href="spm.php"><i class="fas fa-chart-pie"></i> SPM Target</a></li>
         <li><a href="spm_realisasi.php"><i class="fas fa-chart-line"></i> SPM Realisasi</a></li>
+        <li class="menu-group">Lainnya</li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>

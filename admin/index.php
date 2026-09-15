@@ -119,6 +119,23 @@ if (mysqli_num_rows($checkRekap) > 0) {
     }
 }
 
+// Ringkasan Rekap SDMK per kecamatan (guarded: tabel belum ada bila migration belum dijalankan)
+$sdmkRekapPerTahun = [];
+$sdmkRekapKec = 0;
+$checkSdmkRekap = mysqli_query($config, "SHOW TABLES LIKE 'tbl_sdmk_kecamatan_rekap'");
+if (mysqli_num_rows($checkSdmkRekap) > 0) {
+    $qSdmkRekap = mysqli_query($config, "SELECT tahun, COUNT(*) c, COUNT(DISTINCT id_item) j FROM tbl_sdmk_kecamatan_rekap WHERE aktif='Y' GROUP BY tahun ORDER BY tahun");
+    if ($qSdmkRekap) {
+        while ($r = mysqli_fetch_assoc($qSdmkRekap)) {
+            $sdmkRekapPerTahun[(int)$r['tahun']] = ['baris' => (int)$r['c'], 'jenis' => (int)$r['j']];
+        }
+    }
+    $qSdmkKec = mysqli_query($config, "SELECT COUNT(DISTINCT id_kecamatan) k FROM tbl_sdmk_kecamatan_rekap WHERE aktif='Y'");
+    if ($qSdmkKec) {
+        $sdmkRekapKec = (int)mysqli_fetch_assoc($qSdmkKec)['k'];
+    }
+}
+
 // Ringkasan SPM
 $spmCounts = [];
 $spmTotal = 0;
@@ -358,6 +375,33 @@ if (mysqli_num_rows($checkSpm) > 0) {
                 <a href="crud/faskes_rekap.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Rekap</a>
             </div>
 
+            <!-- 1c. REKAP SDMK (agregat per kecamatan, 5 tahun terakhir, tabel terpisah) -->
+            <div class="card-editor">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-chart-bar"></i>
+                        <div>
+                            <h3>Rekap SDMK</h3>
+                            <p>Agregat per kecamatan, 5 tahun terakhir</p>
+                        </div>
+                    </div>
+                    <span class="badge"><?= $sdmkRekapKec ?> kecamatan</span>
+                </div>
+                <table>
+                    <?php if (!empty($sdmkRekapPerTahun)): ?>
+                        <?php foreach ($sdmkRekapPerTahun as $th => $rc): ?>
+                        <tr>
+                            <td><?= $th ?></td>
+                            <td><?= number_format($rc['jenis']) ?> jenis / <?= number_format($rc['baris']) ?> baris</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data rekap SDMK. Mulai isi lewat menu Kelola Rekap SDMK.</td></tr>
+                    <?php endif; ?>
+                </table>
+                <a href="crud/sdmk_kecamatan_rekap.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Rekap SDMK</a>
+            </div>
+
             <!-- 2. SDM — DIRAPIKAN: ringkas per kategori, tombol langsung terlihat tanpa scroll -->
             <div class="card-editor">
                 <div class="card-title">
@@ -406,7 +450,6 @@ if (mysqli_num_rows($checkSpm) > 0) {
                 <?php endif; ?>
                 <div class="card-foot">
                     <a href="crud/sdmk.php?tab=items" class="link-more"><i class="fas fa-external-link-alt"></i> Lihat rincian per jenis SDM →</a>
-                    <a href="crud/sdm.php" class="link-muted">SDM legacy</a>
                 </div>
             </div>
 

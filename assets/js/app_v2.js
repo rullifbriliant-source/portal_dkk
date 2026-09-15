@@ -2544,8 +2544,12 @@ const FasyankesModal = {
             });
     },
 
-    renderRekap: function(json) {
-        const box = DOM.id("faskesRekapContent");
+    renderRekap: function(json, opts) {
+        // opts opsional (jalur lama tanpa opts berperilaku PERSIS seperti
+        // sebelumnya): { years, labelField, headLabel, emptyText, boxId,
+        // preserveOrder }. Dipakai ulang oleh rekap SDMK kecamatan.
+        opts = opts || {};
+        const box = DOM.id(opts.boxId || "faskesRekapContent");
         if (!box) return;
         if (!json || json.status === false) {
             box.innerHTML =
@@ -2555,29 +2559,37 @@ const FasyankesModal = {
                 "</div>";
             return;
         }
-        const years = this.rekapYears;
-        // Matriks: jenis_sarana -> {tahun: jumlah}. NULL = tidak ada data.
+        const years = opts.years || this.rekapYears;
+        const labelField = opts.labelField || "jenis_sarana";
+        const headLabel = opts.headLabel || "Sarana Pelayanan Kesehatan";
+        const emptyText = opts.emptyText || "Data rekap 2021–2025 belum tersedia.";
+        // Matriks: label -> {tahun: jumlah}. NULL = tidak ada data.
         const mat = {};
         (json.data || []).forEach(function(yr) {
             (yr.items || []).forEach(function(it) {
-                const nama = it.jenis_sarana;
+                const nama = it[labelField];
                 if (!nama) return;
                 if (!mat[nama]) mat[nama] = {};
                 mat[nama][yr.tahun] = it.jumlah;
             });
         });
-        const names = Object.keys(mat).sort(function(a, b) {
-            return a.localeCompare(b, "id");
-        });
+        let names = Object.keys(mat);
+        // Jalur lama: alfabetis. Rekap SDMK: pertahankan urutan kemunculan
+        // (API sudah mengurutkan sesuai urutan master).
+        if (!opts.preserveOrder) {
+            names = names.sort(function(a, b) {
+                return a.localeCompare(b, "id");
+            });
+        }
         if (names.length === 0) {
             box.innerHTML =
                 '<div class="faskes-empty">' +
                 '<i class="fas fa-table"></i>' +
-                "<p>Data rekap 2021–2025 belum tersedia.</p>" +
+                "<p>" + emptyText + "</p>" +
                 "</div>";
             return;
         }
-        let html = '<table class="rekap-table"><thead><tr><th>Sarana Pelayanan Kesehatan</th>';
+        let html = '<table class="rekap-table"><thead><tr><th>' + headLabel + '</th>';
         years.forEach(function(t) { html += "<th>" + t + "</th>"; });
         html += "</tr></thead><tbody>";
         names.forEach(function(nama) {
@@ -2915,6 +2927,11 @@ const SdmModal = {
     data: null,
     activeJenis: "Semua",
     isKabupaten: false,
+    // Rekap SDMK kecamatan: id dari SdmModal.data.id_kecamatan (get_sdm.php).
+    // Rekap SDMK kabupaten: ?scope=kabupaten (SUM lintas kecamatan).
+    sdmkKecamatanId: null,
+    sdmkScope: "kecamatan",
+    sdmkRekapReqId: 0,
 
     // Nama agregat "N Kecamatan" (N = COUNT tbl_kecamatan, dinamis mengikuti
     // api/kecamatan.php) — BUKAN nama kecamatan asli.
@@ -2948,6 +2965,20 @@ const SdmModal = {
         const modal = DOM.id("sdmModal");
         if (modal) modal.addEventListener("click", function(e){ if(e.target===modal) SdmModal.close(); });
         document.addEventListener("keydown", function(e){ if(e.key==="Escape") SdmModal.close(); });
+        // VIEW REKAP SDMK KECAMATAN (dalam modal SDM).
+        const sdmkLink = DOM.id("sdmkRekapLink");
+        if (sdmkLink) {
+            sdmkLink.addEventListener("click", function(e) {
+                e.preventDefault();
+                SdmModal.openSdmkRekap();
+            });
+        }
+        const sdmkBack = DOM.id("sdmkRekapBack");
+        if (sdmkBack) {
+            sdmkBack.addEventListener("click", function() {
+                SdmModal.showSdmView("list");
+            });
+        }
         Log.info("SdmModal Ready");
     },
 
@@ -2964,6 +2995,8 @@ const SdmModal = {
             this.currentKecamatan = null;
             this.isKabupaten = true;
             this.setTitle("SDM — Kabupaten Sukoharjo");
+            this.showSdmView("list");
+            SdmModal.showSdmkKabupaten();
             this.showLoading();
             this.loadKabupaten();
             return;
@@ -2983,6 +3016,10 @@ const SdmModal = {
         modal.classList.add("show");
         const app = DOM.id("appSdm");
         if (app) app.classList.add("active");
+        // Selalu mulai dari view daftar (anti-stale); link rekap SDMK
+        // dimunculkan lagi setelah daftar dimuat dan id diketahui.
+        SdmModal.showSdmView("list");
+        SdmModal.hideSdmkLink();
 
         if (!kecamatan) {
             this.currentKecamatan = null;
@@ -3005,6 +3042,148 @@ const SdmModal = {
 
     setTitle: function(t){ const el=DOM.id("sdmModalTitle"); if(el) el.textContent=t; },
 
+    /* ==========================================================
+       REKAP SDMK KECAMATAN (5 tahun terakhir dinamis, dalam modal SDM).
+       id kecamatan dari SdmModal.data.id_kecamatan (api/get_sdm.php).
+       Tanpa id (kabupaten / pilih-kecamatan / NULL) -> link disembunyikan.
+       Render tabel REUSE FasyankesModal.renderRekap (opts).
+    ========================================================== */
+
+    showSdmView: function(name) {
+        const list = DOM.id("sdmViewList");
+        const sdmk = DOM.id("sdmViewSdmk");
+        if (!list || !sdmk) return;
+        list.hidden = (name !== "list");
+        sdmk.hidden = (name !== "sdmk");
+    },
+
+    hideSdmkLink: function() {
+        this.sdmkKecamatanId = null;
+        this.sdmkScope = "kecamatan";
+        const link = DOM.id("sdmkRekapLink");
+        if (link) link.hidden = true;
+    },
+
+    // Mode kabupaten: link selalu bisa tampil (tanpa id).
+    showSdmkKabupaten: function() {
+        this.sdmkKecamatanId = null;
+        this.sdmkScope = "kabupaten";
+        const link = DOM.id("sdmkRekapLink");
+        if (link) {
+            link.hidden = false;
+            const label = DOM.id("sdmkRekapLinkText");
+            if (label) label.textContent = "Rekap SDMK Kabupaten →";
+        }
+    },
+
+    // Tentukan id kecamatan dari data SDM yg sedang dibuka.
+    resolveSdmkKecamatan: function() {
+        let id = null;
+        const d = this.data || {};
+        if (d.id_kecamatan !== null && d.id_kecamatan !== undefined && d.id_kecamatan !== "") {
+            const parsed = parseInt(d.id_kecamatan, 10);
+            if (!isNaN(parsed)) id = parsed;
+        }
+        if (id === null) {
+            this.hideSdmkLink();
+            return;
+        }
+        this.sdmkKecamatanId = id;
+        this.sdmkScope = "kecamatan";
+        const link = DOM.id("sdmkRekapLink");
+        if (link) {
+            link.hidden = false;
+            const label = DOM.id("sdmkRekapLinkText");
+            if (label) {
+                const kecName = d.kecamatan || this.currentKecamatan || "";
+                label.textContent = "Rekap SDMK Kecamatan " + kecName + " →";
+            }
+        }
+    },
+
+    openSdmkRekap: function() {
+        let url = null;
+        if (this.sdmkScope === "kabupaten") {
+            url = "api/get_sdmk_kecamatan_rekap.php?scope=kabupaten&ts=" + Date.now();
+        } else if (this.sdmkKecamatanId) {
+            url = "api/get_sdmk_kecamatan_rekap.php?id_kecamatan=" + this.sdmkKecamatanId + "&ts=" + Date.now();
+        } else {
+            return;
+        }
+        this.showSdmView("sdmk");
+        this.loadSdmkRekap(url);
+    },
+
+    loadSdmkRekap: function(url) {
+        const box = DOM.id("sdmkRekapContent");
+        const myReq = ++this.sdmkRekapReqId;
+        if (box) {
+            box.innerHTML =
+                '<div class="faskes-empty">' +
+                '<i class="fas fa-spinner fa-spin"></i>' +
+                "<p>Memuat data rekap...</p>" +
+                "</div>";
+        }
+        const title = DOM.id("sdmkRekapTitle");
+        if (title) title.textContent = "Rekap SDMK Kecamatan";
+        const sub = DOM.id("sdmkRekapSub");
+        if (sub) sub.textContent = "Memuat...";
+        PortalAPI.fetchJSON(url)
+            .then(function(json) {
+                // Guard: abaikan bila modal sudah ditutup, user sudah
+                // kembali ke daftar, atau ada request yang lebih baru.
+                const modal = DOM.id("sdmModal");
+                if (!modal || !modal.classList.contains("show")) return;
+                const sdmkView = DOM.id("sdmViewSdmk");
+                if (!sdmkView || sdmkView.hidden) return;
+                if (myReq !== SdmModal.sdmkRekapReqId) return;
+                SdmModal.renderSdmkRekap(json);
+            })
+            .catch(function(err) {
+                Log.error("Gagal load rekap SDMK kecamatan:", err);
+                const modal = DOM.id("sdmModal");
+                if (!modal || !modal.classList.contains("show")) return;
+                SdmModal.renderSdmkRekap({ status: false });
+            });
+    },
+
+    renderSdmkRekap: function(json) {
+        // Judul dinamis dari response API (scope + nama + rentang tahun).
+        const isKab = json && json.scope === "kabupaten";
+        const title = DOM.id("sdmkRekapTitle");
+        const sub = DOM.id("sdmkRekapSub");
+        const okMeta = json && json.status !== false && json.kecamatan && json.kecamatan.nama_kecamatan;
+        const wilayahName = okMeta ? json.kecamatan.nama_kecamatan : (isKab ? "Kabupaten Sukoharjo" : "Kecamatan");
+        if (title) {
+            title.textContent = isKab
+                ? "Rekap SDMK Kabupaten Sukoharjo"
+                : "Rekap SDMK Kecamatan " + wilayahName;
+        }
+        if (sub) {
+            if (okMeta && json.tahun_min && json.tahun_max) {
+                sub.textContent = (isKab ? "Kabupaten Sukoharjo" : "Kecamatan " + json.kecamatan.nama_kecamatan) + ", " + json.tahun_min + "–" + json.tahun_max;
+            } else if (okMeta) {
+                sub.textContent = (isKab ? "Kabupaten Sukoharjo" : "Kecamatan " + json.kecamatan.nama_kecamatan) + " — belum ada data";
+            } else {
+                sub.textContent = "Gagal memuat data.";
+            }
+        }
+        // Kolom tahun = tahun yg ada di data (ASC); kosong -> pesan ramah.
+        const years = [];
+        (json && json.data || []).forEach(function(yr) {
+            if (yr && yr.tahun !== undefined && years.indexOf(yr.tahun) < 0) years.push(yr.tahun);
+        });
+        years.sort(function(a, b) { return a - b; });
+        FasyankesModal.renderRekap(json, {
+            years: years,
+            labelField: "nama_item",
+            headLabel: "Jenis SDM",
+            emptyText: isKab ? "Belum ada data rekap SDMK kabupaten." : "Belum ada data rekap SDMK untuk kecamatan ini.",
+            boxId: "sdmkRekapContent",
+            preserveOrder: true
+        });
+    },
+
     showLoading: function(){
         const list=DOM.id("sdmList"); if(list) list.innerHTML='<div class="faskes-empty"><i class="fas fa-spinner fa-spin"></i><p>Memuat data SDM...</p></div>';
         const sum=DOM.id("sdmModalSummary"); if(sum) sum.innerHTML='';
@@ -3021,8 +3200,9 @@ const SdmModal = {
                 SdmModal.renderSummary(json);
                 SdmModal.renderFilters(json);
                 SdmModal.renderList(json);
-            } else { SdmModal.renderEmpty("Data tidak ditemukan."); }
-        }).catch(function(err){ Log.error("Gagal load SDM modal",err); SdmModal.renderError(); });
+                SdmModal.resolveSdmkKecamatan();
+            } else { SdmModal.renderEmpty("Data tidak ditemukan."); SdmModal.hideSdmkLink(); }
+        }).catch(function(err){ Log.error("Gagal load SDM modal",err); SdmModal.renderError(); SdmModal.hideSdmkLink(); });
     },
 
     // Mode kabupaten: tanpa param kecamatan → cabang default get_sdm.php
@@ -3038,8 +3218,9 @@ const SdmModal = {
                 if(json.kecamatan == null) json.kecamatan="Kabupaten Sukoharjo";
                 SdmModal.renderSummary(json);
                 SdmModal.renderKabNotice();
-            } else { SdmModal.renderEmpty("Data tidak ditemukan."); }
-        }).catch(function(err){ Log.error("Gagal load SDM kabupaten",err); SdmModal.renderError(); });
+                SdmModal.showSdmkKabupaten();
+            } else { SdmModal.renderEmpty("Data tidak ditemukan."); SdmModal.hideSdmkLink(); }
+        }).catch(function(err){ Log.error("Gagal load SDM kabupaten",err); SdmModal.renderError(); SdmModal.hideSdmkLink(); });
     },
 
     // Pengganti filter+daftar per-faskes saat mode kabupaten.

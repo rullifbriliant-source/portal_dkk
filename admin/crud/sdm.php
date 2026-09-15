@@ -36,7 +36,8 @@ if (!$hasKorelasi && count($items)==0) {
     while ($row = mysqli_fetch_assoc($qFallback)) $items[] = $row;
 }
 
-// Daftar Spesialis Dokter (master)
+// Daftar Spesialis Dokter (master) — hanya untuk dropdown filter di halaman ini.
+// CRUD master dipindah ke admin/crud/spesialis.php (satu-satunya penulis tbl_spesialis).
 $spesialisList = [];
 $qSp = mysqli_query($config, "SELECT * FROM tbl_spesialis WHERE aktif='Y' ORDER BY urutan, nama_spesialis");
 if ($qSp) while ($row = mysqli_fetch_assoc($qSp)) $spesialisList[] = $row;
@@ -101,48 +102,8 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-// ============================================================
-// CRUD SPESIALIS DOKTER — tbl_spesialis
-// ============================================================
-if (isset($_POST['add_spesialis'])) {
-    $nama = mysqli_real_escape_string($config, trim($_POST['nama_spesialis'] ?? ''));
-    $kode = mysqli_real_escape_string($config, trim($_POST['kode'] ?? ''));
-    $urutan = (int)($_POST['urutan_sp'] ?? 0);
-    if ($nama !== '') {
-        $check = mysqli_query($config, "SELECT id FROM tbl_spesialis WHERE nama_spesialis='$nama' LIMIT 1");
-        if ($check && mysqli_num_rows($check)==0) {
-            $stmt = $config->prepare("INSERT INTO tbl_spesialis (nama_spesialis, kode, urutan) VALUES (?, ?, ?)");
-            $stmt->bind_param("ssi", $nama, $kode, $urutan);
-            $stmt->execute();
-            header("Location: sdm.php?msg_sp=saved#cardSpesialis");
-            exit;
-        } else {
-            header("Location: sdm.php?msg_sp=exists#cardSpesialis");
-            exit;
-        }
-    }
-    header("Location: sdm.php?msg_sp=invalid#cardSpesialis");
-    exit;
-}
-if (isset($_POST['edit_spesialis'])) {
-    $id = (int)($_POST['id_sp'] ?? 0);
-    $nama = mysqli_real_escape_string($config, trim($_POST['nama_spesialis'] ?? ''));
-    $kode = mysqli_real_escape_string($config, trim($_POST['kode'] ?? ''));
-    $urutan = (int)($_POST['urutan_sp'] ?? 0);
-    if ($id && $nama !== '') {
-        $stmt = $config->prepare("UPDATE tbl_spesialis SET nama_spesialis=?, kode=?, urutan=? WHERE id=?");
-        $stmt->bind_param("ssii", $nama, $kode, $urutan, $id);
-        $stmt->execute();
-    }
-    header("Location: sdm.php?msg_sp=updated#cardSpesialis");
-    exit;
-}
-if (isset($_GET['delete_sp'])) {
-    $id = (int)$_GET['delete_sp'];
-    mysqli_query($config, "UPDATE tbl_spesialis SET aktif='N' WHERE id=$id");
-    header("Location: sdm.php?msg_sp=deleted#cardSpesialis");
-    exit;
-}
+// CRUD SPESIALIS DOKTER dipindah ke admin/crud/spesialis.php
+// (satu-satunya penulis tbl_spesialis). Blok handler di sini dihapus.
 
 // ============================================================
 // SDM PER FASYANKES DIPINDAHKAN KE admin/crud/sdmk.php
@@ -302,6 +263,14 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
             font-size: 16px;
         }
         .sidebar-menu a.active i { color: #00d4ff; }
+        .sidebar-menu .menu-group {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.3);
+            padding: 14px 16px 6px;
+        }
         .sidebar-menu .logout {
             margin-top: 30px;
             border-top: 1px solid rgba(255,255,255,0.06);
@@ -520,15 +489,22 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         <h2>Portal DKK<br><small>Dashboard Admin</small></h2>
     </div>
     <ul class="sidebar-menu">
+        <li class="menu-group">Utama</li>
         <li><a href="../index.php"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li class="menu-group">Fasyankes</li>
         <li><a href="fasyankes.php"><i class="fas fa-hospital"></i> Fasyankes</a></li>
         <li><a href="faskes_rekap.php"><i class="fas fa-table"></i> Rekap Fasyankes</a></li>
+        <li class="menu-group">SDM Kesehatan</li>
         <li><a href="sdmk.php"><i class="fas fa-hospital-user"></i> SDMK</a></li>
-        <li><a href="sdm.php" class="active"><i class="fas fa-users"></i> SDM (legacy)</a></li>
+        <li><a href="sdmk_kecamatan_rekap.php"><i class="fas fa-chart-bar"></i> Rekap SDMK</a></li>
+        <li><a href="spesialis.php"><i class="fas fa-user-doctor"></i> Spesialis Dokter</a></li>
+        <li class="menu-group">Wilayah &amp; Data Lain</li>
         <li><a href="kecamatan.php"><i class="fas fa-map"></i> Kecamatan</a></li>
         <li><a href="penyakit.php"><i class="fas fa-disease"></i> Penyakit</a></li>
+        <li class="menu-group">SPM</li>
         <li><a href="spm.php"><i class="fas fa-chart-pie"></i> SPM Target</a></li>
         <li><a href="spm_realisasi.php"><i class="fas fa-chart-line"></i> SPM Realisasi</a></li>
+        <li class="menu-group">Lainnya</li>
         <li><a href="portal_info.php"><i class="fas fa-circle-info"></i> Informasi Portal</a></li>
         <li class="logout"><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
@@ -651,70 +627,15 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
 
     </div>
 
-    <!-- KELOLA SPESIALIS DOKTER -->
-    <div class="card" id="cardSpesialis">
-        <h3><i class="fas fa-user-doctor" style="color:#00d4ff;margin-right:10px;"></i>Kelola daftar spesialis dokter (Sp.A, Sp.OG, Sp.PD, dll).</h3>
-
-        <?php if (isset($_GET['msg_sp'])): ?>
-            <?php if ($_GET['msg_sp']==='saved'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Spesialis berhasil ditambahkan!</div>
-            <?php elseif ($_GET['msg_sp']==='updated'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Spesialis berhasil diperbarui!</div>
-            <?php elseif ($_GET['msg_sp']==='deleted'): ?><div class="alert alert-success"><i class="fas fa-check-circle"></i> Spesialis dihapus (soft delete)!</div>
-            <?php elseif ($_GET['msg_sp']==='exists'): ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Nama spesialis sudah ada!</div>
-            <?php else: ?><div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Gagal. Periksa input.</div>
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <form method="POST" class="form-inline" style="margin-bottom:20px;">
-            <div class="form-group">
-                <label>Nama Spesialis *</label>
-                <input type="text" name="nama_spesialis" placeholder="Contoh: Spesialis Anak" required style="width:200px;">
-            </div>
-            <div class="form-group">
-                <label>Kode</label>
-                <input type="text" name="kode" placeholder="Sp.A" style="width:100px;">
-            </div>
-            <div class="form-group">
-                <label>Urutan</label>
-                <input type="number" name="urutan_sp" value="<?php echo count($spesialisList)+1; ?>" min="0" style="width:80px;">
-            </div>
-            <button type="submit" name="add_spesialis" class="btn-primary"><i class="fas fa-plus"></i> Tambah Spesialis</button>
-        </form>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Nama Spesialis</th>
-                    <th>Kode</th>
-                    <th>Urutan</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($spesialisList)>0): ?>
-                <?php foreach ($spesialisList as $idx=>$sp): ?>
-                <tr>
-                    <td><?php echo $idx+1; ?></td>
-                    <td><?php echo htmlspecialchars($sp['nama_spesialis']); ?></td>
-                    <td><span class="badge-total"><?php echo htmlspecialchars($sp['kode'] ?? '-'); ?></span></td>
-                    <td><?php echo (int)$sp['urutan']; ?></td>
-                    <td>
-                        <form method="POST" class="form-inline-edit">
-                            <input type="hidden" name="id_sp" value="<?php echo $sp['id']; ?>">
-                            <input type="text" name="nama_spesialis" value="<?php echo htmlspecialchars($sp['nama_spesialis']); ?>" class="input-name" style="width:160px;">
-                            <input type="text" name="kode" value="<?php echo htmlspecialchars($sp['kode'] ?? ''); ?>" style="width:70px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.1);">
-                            <input type="number" name="urutan_sp" value="<?php echo (int)$sp['urutan']; ?>" class="input-order" style="width:60px;">
-                            <button type="submit" name="edit_spesialis" class="btn-icon"><i class="fas fa-pen"></i> Edit</button>
-                        </form>
-                        <a href="?delete_sp=<?php echo $sp['id']; ?>" class="btn-icon btn-danger" onclick="return confirm('Hapus spesialis ini? Data SDM terkait akan jadi NULL.')"><i class="fas fa-trash"></i> Hapus</a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                <?php else: ?>
-                <tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.3);padding:20px;">Belum ada data spesialis</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+    <!-- KELOLA SPESIALIS DOKTER DIPINDAHKAN -->
+    <div class="card" style="border:1px solid rgba(0,212,255,0.25);background:linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,136,204,0.04));">
+        <h3 style="color:#72e8ff"><i class="fas fa-user-doctor" style="color:#00d4ff"></i> Kelola Spesialis Dokter dipindahkan</h3>
+        <p style="color:rgba(255,255,255,0.7);font-size:13px;line-height:1.7">
+            CRUD master spesialis dokter sekarang di halaman tersendiri:
+        </p>
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+            <a href="spesialis.php" class="btn-primary"><i class="fas fa-user-doctor"></i> Buka Spesialis Dokter</a>
+        </div>
     </div>
 
     <!-- SDM PER FASYANKES DIPINDAHKAN -->
@@ -729,7 +650,7 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
             <a href="sdmk.php?tab=faskes" class="btn-primary" style="background:linear-gradient(135deg,#FF9800,#EF6C00)"><i class="fas fa-hospital-user"></i> Buka SDMK Terpadu</a>
             <a href="sdmk.php?tab=items" class="btn-primary" style="background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.25)"><i class="fas fa-list"></i> Master Jenis SDM</a>
         </div>
-        <p style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35)"><i class="fas fa-info-circle"></i> Bagian lain di halaman ini (CRUD Jenis SDM legacy, Spesialis, SDMK per Kecamatan) tetap aktif karena tidak menyentuh kolom generated.</p>
+        <p style="margin-top:12px;font-size:11px;color:rgba(255,255,255,0.35)"><i class="fas fa-info-circle"></i> Bagian lain di halaman ini (CRUD Jenis SDM legacy, SDMK per Kecamatan) tetap aktif karena tidak menyentuh kolom generated. Spesialis Dokter pindah ke <a href="spesialis.php" style="color:#00d4ff;">halaman tersendiri</a>.</p>
     </div>
 </div>
 

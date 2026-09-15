@@ -728,10 +728,39 @@ id="footerBar">
                 <button id="closeSdm" class="faskes-close">&times;</button>
             </div>
             <div class="faskes-body">
+                <!-- VIEW 1: daftar SDM -->
+                <div class="faskes-view sdm-view-list" id="sdmViewList">
                 <div id="sdmModalSummary" style="padding:12px 16px;margin-bottom:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:12px;display:flex;gap:16px;flex-wrap:wrap;"></div>
                 <div class="faskes-filters" id="sdmFilters"></div>
                 <div class="faskes-list" id="sdmList">
                     <div class="faskes-empty"><i class="fas fa-users"></i><p>Pilih kecamatan pada peta terlebih dahulu.</p></div>
+                </div>
+                    <div class="faskes-foot">
+                        <a href="#" id="sdmkRekapLink" hidden>
+                            <i class="fas fa-chart-bar"></i> <span id="sdmkRekapLinkText">Rekap SDMK Kecamatan</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: rekap SDMK kecamatan (5 tahun terakhir dinamis) -->
+                <div class="faskes-view sdm-view-sdmk" id="sdmViewSdmk" hidden>
+                    <div class="rekap-head">
+                        <div>
+                            <h4 id="sdmkRekapTitle">Rekap SDMK Kecamatan</h4>
+                            <p id="sdmkRekapSub">Memuat...</p>
+                        </div>
+                        <button type="button" class="rekap-back" id="sdmkRekapBack">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Detail SDM
+                        </button>
+                    </div>
+                    <div class="rekap-scroll">
+                        <div id="sdmkRekapContent">
+                            <div class="faskes-empty">
+                                <i class="fas fa-table"></i>
+                                <p>Memuat data rekap...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
