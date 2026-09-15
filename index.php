@@ -16,11 +16,8 @@
 
     <link rel="icon" href="assets/img/logo.png">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Poppins self-hosted via assets/css/style_v2.css (@font-face).
+         Link Google Fonts dihapus agar tab tidak tertahan font remote. -->
 
     <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
@@ -44,6 +41,9 @@
     ======================================================= -->
 
     <div class="video-container">
+
+    <!-- EARTH BACKGROUND (dekoratif, di belakang seluruh UI & peta) -->
+    <div class="earth-bg" aria-hidden="true"></div>
 
     <video
         autoplay
@@ -139,33 +139,31 @@
             <div class="department-name">
                 DINAS KESEHATAN KABUPATEN SUKOHARJO
             </div>
-
-            <div class="header-date">
-                <span id="tanggalIndonesia"></span>
-
-                <span class="weather">
-                    ☀️
-                    <span id="weather">-</span>
-                </span>
-            </div>
         </div>
 
     </div>
 
 
-    <!-- KANAN: LOGO SUKOHARJO SPEKTAKULER -->
-    <div class="header-logo-spektakuler">
-        <img src="assets/img/spektakuler.png"
-             alt="Sukoharjo Spektakuler">
+    <!-- KANAN: PANEL TANGGAL/JAM | CUACA -->
+    <div class="header-datetime" aria-label="Informasi waktu dan cuaca">
+        <div class="hd-left">
+            <i class="fas fa-calendar-alt hd-cal" aria-hidden="true"></i>
+            <div class="hd-text">
+                <span id="tanggalHeader">Memuat...</span>
+                <span class="hd-time"><span id="clockHeader">00:00:00</span> WIB</span>
+            </div>
+        </div>
+        <span class="hd-sep" aria-hidden="true"></span>
+        <div class="hd-right">
+            <i class="fas fa-cloud-sun hd-wicon" aria-hidden="true"></i>
+            <div class="hd-text">
+                <span id="weatherHeader">-</span>
+                <span class="hd-cond" id="weatherCond">-</span>
+            </div>
+        </div>
     </div>
 
 </header>
-    
-    <!-- Jam di tengah, terpisah -->
-    <div class="center-clock">
-        <div id="clock">00:00:00</div>
-    </div>
-    </header>
 
     <!-- =======================================================
     LIVE INFO
@@ -285,6 +283,11 @@
 
                 </div>
 
+                <a class="gis-link"
+                    href="https://pisda.sukoharjokab.go.id/catalogue/#/all?filter%7Bowner.pk.in%7D=1005"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Buka Katalog GIS PISDA Sukoharjo (tab baru)">
                 <div>
 
                     <i class="fas fa-map-location-dot fa-2x"></i>
@@ -294,6 +297,7 @@
                     GIS
 
                 </div>
+                </a>
 
             </div>
 
@@ -307,7 +311,6 @@
 
                 <div class="stat-box" id="statBoxSpm" role="button" tabindex="0" title="Lihat data Standar Pelayanan Minimal (SPM)">
                     <i class="fas fa-chart-pie"></i>
-                    <h4 id="statProgram">0</h4>
                     <p>SPM</p>
                 </div>
 
@@ -643,6 +646,7 @@ id="footerBar">
                 <h3>
                     <i class="fas fa-hospital" style="color:#00d4ff;margin-right:10px;"></i>
                     <span id="fasyankesModalTitle">Fasyankes</span>
+                    <small class="faskes-period">Data Fasyankes 2026</small>
                 </h3>
 
                 <button
@@ -657,21 +661,51 @@ id="footerBar">
 
             <div class="faskes-body">
 
-                <div
-                    class="faskes-filters"
-                    id="fasyankesFilters">
+                <!-- VIEW 1: daftar Fasyankes 2026 (existing) -->
+                <div class="faskes-view faskes-view-list" id="fasyankesViewList">
+                    <div
+                        class="faskes-filters"
+                        id="fasyankesFilters">
 
-                </div>
-
-                <div
-                    class="faskes-list"
-                    id="fasyankesList">
-
-                    <div class="faskes-empty">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <p>Pilih kecamatan pada peta terlebih dahulu.</p>
                     </div>
 
+                    <div
+                        class="faskes-list"
+                        id="fasyankesList">
+
+                        <div class="faskes-empty">
+                            <i class="fas fa-map-marked-alt"></i>
+                            <p>Pilih kecamatan pada peta terlebih dahulu.</p>
+                        </div>
+
+                    </div>
+
+                    <div class="faskes-foot">
+                        <a href="#" id="fasyankesRekapLink">
+                            <i class="fas fa-table"></i> Detail Rekap 2021–2025
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: rekap kabupaten 2021–2025 -->
+                <div class="faskes-view faskes-view-rekap" id="fasyankesViewRekap" hidden>
+                    <div class="rekap-head">
+                        <div>
+                            <h4>Rekap Sarana Pelayanan Kesehatan</h4>
+                            <p>Kabupaten Sukoharjo, 2021–2025</p>
+                        </div>
+                        <button type="button" class="rekap-back" id="fasyankesRekapBack">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Fasyankes 2026
+                        </button>
+                    </div>
+                    <div class="rekap-scroll">
+                        <div id="faskesRekapContent">
+                            <div class="faskes-empty">
+                                <i class="fas fa-table"></i>
+                                <p>Memuat data rekap...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -803,39 +837,90 @@ id="footerBar">
     ======================================================= -->
     <script>
 
-    window.addEventListener("load",function(){
+    // Loading screen: selesai ketika Portal cukup siap ditampilkan,
+    // BUKAN sekadar DOM selesai dan BUKAN timer palsu. Sinyal kesiapan
+    // dibaca dari DOM: nama kecamatan + angka Penduduk sudah berisi
+    // nilai render pertama (jalur sukses maupun offline-fallback),
+    // artinya Startup/Dashboard + API pertama sudah settled dan UI
+    // utama tidak lagi blank. Tanpa fixed delay: finish langsung
+    // saat sinyal terpenuhi. Timeout 4 dtk hanya langit-langit
+    // pengaman bila backend gagal total (bukan penahan rutin).
+    // Tidak menunggu window.load / SVG / font / API remote.
+    (function () {
 
-        var bar=document.getElementById("loadingProgress");
-        var screen=document.getElementById("loadingScreen");
+        var bar = document.getElementById("loadingProgress");
+        var screen = document.getElementById("loadingScreen");
 
-        var p=0;
+        if (!bar || !screen) return;
 
-        var timer=setInterval(function(){
+        var p = 0;
+        var done = false;
 
-            p++;
+        function finish() {
 
-            bar.style.width=p+"%";
+            if (done) return;
+            done = true;
 
-            if(p>=100){
+            clearInterval(timer);
+            clearInterval(poll);
 
-                clearInterval(timer);
+            bar.style.width = "100%";
 
-                screen.style.opacity="0";
+            screen.style.opacity = "0";
 
-                setTimeout(function(){
+            setTimeout(function() {
 
-                    screen.style.display="none";
+                screen.style.display = "none";
 
-                    document.body.classList.remove("loading");
-                    document.body.classList.add("portal-ready");
+                document.body.classList.remove("loading");
+                document.body.classList.add("portal-ready");
 
-                },500);
+            }, 300);
 
+        }
+
+        function textReady(id, badVals) {
+            var el = document.getElementById(id);
+            if (!el) return false;
+            var t = (el.textContent || "").trim();
+            if (t === "") return false;
+            for (var i = 0; i < badVals.length; i++) {
+                if (t === badVals[i]) return false;
+            }
+            return true;
+        }
+
+        function portalReady() {
+            // DOM harus selesai dulu.
+            if (document.readyState === "loading") return false;
+            // Data Dasar sudah dirender (nilai sukses atau fallback offline).
+            if (!textReady("namaKecamatan", ["Memuat...", "-"])) return false;
+            // Card Penduduk sudah berisi agregat resmi P1 (bukan placeholder 0).
+            if (!textReady("statPenduduk", ["0"])) return false;
+            return true;
+        }
+
+        // Progres visual menuju 90% selama menunggu sinyal; finish
+        // yang menuntaskan 100% tepat saat Portal siap.
+        var timer = setInterval(function() {
+
+            p += Math.max(1, (90 - p) / 6);
+
+            if (p >= 90) {
+                p = 90;
             }
 
-        },20);
+            bar.style.width = p + "%";
 
-    });
+        }, 30);
+
+        var poll = setInterval(function() {
+            if (portalReady()) finish();
+        }, 100);
+
+        setTimeout(finish, 4000);
+
+    })();
 
     document.addEventListener("DOMContentLoaded", function () {
 

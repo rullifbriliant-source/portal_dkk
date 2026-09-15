@@ -2,6 +2,29 @@
    PORTAL TERPADU DKK SUKOHARJO — style_v2.css (RINGKAS)
 ========================================================== */
 
+/* ---- Poppins self-hosted (dulu Google Fonts; dipindah lokal agar
+   tab tidak tertahan font remote — lihat assets/fonts/) ---- */
+@font-face {
+    font-family:'Poppins'; font-style:normal; font-weight:300; font-display:swap;
+    src:url('../fonts/poppins-latin-300-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family:'Poppins'; font-style:normal; font-weight:400; font-display:swap;
+    src:url('../fonts/poppins-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family:'Poppins'; font-style:normal; font-weight:500; font-display:swap;
+    src:url('../fonts/poppins-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family:'Poppins'; font-style:normal; font-weight:600; font-display:swap;
+    src:url('../fonts/poppins-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+    font-family:'Poppins'; font-style:normal; font-weight:700; font-display:swap;
+    src:url('../fonts/poppins-latin-700-normal.woff2') format('woff2');
+}
+
 :root {
     --primary: #061426;
     --secondary: #0b2343;
@@ -115,6 +138,52 @@ body {
 }
 .weather { color:#ffd43b; font-weight:700; }
 
+/* ---- Panel info waktu/cuaca pojok kanan atas (compact glass) ----
+   Kiri: icon kalender + tanggal/jam | separator | Kanan: icon + suhu/kondisi */
+.header-datetime {
+    display:flex; align-items:center; gap:clamp(12px, 1.2vw, 20px);
+    margin-left:auto; flex-shrink:0; align-self:flex-start;
+    margin-top:6px;
+    padding:clamp(10px, 0.9vw, 14px) clamp(18px, 1.5vw, 22px);
+    border-radius:16px;
+    background:linear-gradient(135deg, rgba(10,32,52,.78), rgba(6,20,36,.78));
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(0,212,255,.25);
+    box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 18px rgba(0,212,255,.08);
+    white-space:nowrap;
+}
+.header-datetime .hd-left,
+.header-datetime .hd-right {
+    display:flex; align-items:center; gap:12px;
+}
+.header-datetime .hd-cal {
+    color:#00d4ff; font-size:clamp(28px, 2.4vw, 38px); line-height:1;
+}
+.header-datetime .hd-wicon {
+    color:#ffd43b; font-size:clamp(28px, 2.4vw, 38px); line-height:1;
+}
+.header-datetime .hd-text {
+    display:flex; flex-direction:column; justify-content:center; gap:2px;
+    font-size:clamp(13px, 1vw, 16px); line-height:1.35;
+}
+.header-datetime .hd-text #tanggalHeader { color:#fff; font-weight:600; }
+.header-datetime .hd-time { color:rgba(255,255,255,.85); font-weight:500; }
+.header-datetime .hd-time #clockHeader {
+    font-variant-numeric:tabular-nums; letter-spacing:1px; color:#fff; font-weight:600;
+}
+.header-datetime .hd-text #weatherHeader {
+    color:#ffd43b; font-weight:700; font-size:clamp(16px, 1.4vw, 22px); line-height:1.2;
+}
+.header-datetime .hd-cond { color:rgba(255,255,255,.7); font-size:clamp(11px, 0.9vw, 14px); }
+.header-datetime .hd-sep {
+    width:1px; height:46px; flex-shrink:0;
+    background:rgba(255,255,255,.18);
+}
+@media (max-width:700px) {
+    .header-datetime { flex-wrap:wrap; white-space:normal; margin-left:0; }
+    .header-datetime .hd-sep { display:none; }
+}
+
 .header-logo-spektakuler {
     width:240px; height:150px;
     display:flex; align-items:flex-start; justify-content:center;
@@ -207,7 +276,8 @@ body {
 .portal-feature {
     display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin-top:18px;
 }
-.portal-feature div {
+.portal-feature div,
+.portal-feature a.gis-link {
     padding:12px 6px; border-radius:16px; background:rgba(255,255,255,.05);
     transition:.30s; cursor:pointer; text-align:center;
     overflow:hidden; min-width:0;
@@ -216,13 +286,67 @@ body {
     font-size:clamp(10px, 0.85vw, 13px);
     white-space:nowrap; text-overflow:ellipsis;
 }
-.portal-feature div i {
+.portal-feature div i,
+.portal-feature a.gis-link i {
     font-size:clamp(16px, 1.4vw, 20px) !important;
     margin-bottom:6px;
 }
 .portal-feature div br { display:none; }
-.portal-feature div:hover {
+.portal-feature div:hover,
+.portal-feature a.gis-link:hover {
     background:rgba(0,212,255,.18); transform:translateY(-5px);
+}
+
+/* ==========================================================
+   GIS CARD LINK — samakan box dengan feature lain sekaligus
+   kunci warna tema Portal DKK (cyan/teal) agar tidak kena
+   warna default browser (ungu) pada <a> / :visited / :hover.
+   Scoped ke .gis-link agar tidak memengaruhi card lain.
+========================================================== */
+.gis-link,
+.gis-link:visited,
+.gis-link:hover,
+.gis-link:active {
+    color:inherit;
+    text-decoration:none;
+}
+/* Inner div ikut mewarisi box dari <a>, jangan double-card */
+.portal-feature a.gis-link > div {
+    padding:0;
+    background:transparent;
+    border-radius:0;
+    min-height:0;
+    overflow:visible;
+    transition:none;
+    transform:none;
+    cursor:inherit;
+}
+/* Teks GIS: putih seperti card lain (text node langsung di inner div,
+   mewarisi color dari <a>); icon GIS juga putih */
+.portal-feature a.gis-link,
+.portal-feature a.gis-link:visited {
+    color:#fff;
+}
+.portal-feature a.gis-link i,
+.portal-feature a.gis-link:visited i {
+    color:#fff;
+}
+.portal-feature a.gis-link:hover {
+    color:#fff;
+    box-shadow:0 0 0 1px rgba(0,212,255,.35), 0 0 14px rgba(0,212,255,.18);
+}
+.portal-feature a.gis-link:hover i {
+    color:#fff;
+}
+.portal-feature a.gis-link:active {
+    color:#fff;
+}
+.portal-feature a.gis-link:active i {
+    color:#fff;
+}
+.portal-feature a.gis-link:focus-visible {
+    outline:2px solid rgba(0,212,255,.6);
+    outline-offset:3px;
 }
 
 .center-panel {
@@ -475,6 +599,9 @@ body {
     background:rgba(0,212,255,.18); transform:translateY(-5px);
 }
 .left-panel .stat-box i { font-size:22px; color:#fff; }
+/* Icon SPM diperbesar (angka dihapus) — SCOPED hanya card SPM */
+#statBoxSpm i { font-size:clamp(30px, 2.6vw, 42px); }
+#statBoxSpm p { margin-top:8px; }
 .left-panel .stat-box h4 {
     font-size:clamp(14px, 1.3vw, 18px); margin-top:8px; color:#fff; font-weight:600;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -534,6 +661,13 @@ body {
     border-bottom:1px solid rgba(255,255,255,.08);
 }
 .apps-header h3 { color:#77e5ff; }
+/* Subtitle periode di header modal Fasyankes — kecil, tidak mengganggu judul */
+.apps-header h3 .faskes-period {
+    display:block;
+    margin-top:4px;
+    font-size:12px; font-weight:500; letter-spacing:1.5px;
+    color:rgba(255,255,255,.55);
+}
 .apps-header button { background:none; border:none; color:#fff; font-size:34px; cursor:pointer; }
 .app-category { padding:25px 30px; }
 .app-category h4 { margin-bottom:20px; color:#00d4ff; }
@@ -679,6 +813,7 @@ body {
     transition:.25s; font-family:'Poppins',sans-serif;
 }
 .faskes-chip:hover { background:rgba(0,212,255,.2); }
+.faskes-chip i { margin-right:8px; }
 .faskes-chip.active {
     background:#00d4ff; color:#04182b; border-color:#00d4ff;
 }
@@ -733,6 +868,65 @@ body {
 }
 .faskes-empty i { font-size:46px; color:#00d4ff; opacity:.7; margin-bottom:14px; }
 .faskes-empty p { font-size:15px; }
+
+/* ==========================================================
+   REKAP FASYANKES 2021–2025 (dalam modal Fasyankes, tema Portal)
+========================================================== */
+.faskes-view[hidden] { display:none !important; }
+.faskes-foot {
+    margin-top:16px; text-align:center;
+    padding-top:14px; border-top:1px solid rgba(255,255,255,.08);
+}
+.faskes-foot a {
+    color:#72e8ff; text-decoration:none; font-size:13px; font-weight:600;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 18px; border-radius:10px;
+    background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2);
+    transition:.25s;
+}
+.faskes-foot a:hover { background:rgba(0,212,255,.18); }
+.faskes-foot a i { font-size:12px; }
+.rekap-head {
+    display:flex; justify-content:space-between; align-items:center;
+    gap:12px; flex-wrap:wrap; margin-bottom:16px;
+    padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.rekap-head h4 { color:#77e5ff; font-size:17px; }
+.rekap-head p { color:rgba(255,255,255,.5); font-size:12px; margin-top:4px; }
+.rekap-back {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 16px; border-radius:10px; cursor:pointer;
+    background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2);
+    color:#72e8ff; font-size:13px; font-weight:600; font-family:'Poppins',sans-serif;
+    transition:.25s; white-space:nowrap;
+}
+.rekap-back:hover { background:rgba(0,212,255,.18); }
+.rekap-back i { font-size:11px; }
+.rekap-scroll { overflow-x:auto; }
+.rekap-table { width:100%; border-collapse:collapse; min-width:560px; }
+.rekap-table th,
+.rekap-table td {
+    padding:10px 12px; font-size:13px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+}
+.rekap-table thead th {
+    color:#00d4ff; font-weight:700; font-size:12px; letter-spacing:.5px;
+    background:rgba(0,212,255,.07);
+    text-align:center; white-space:nowrap;
+}
+.rekap-table thead th:first-child { text-align:left; }
+.rekap-table tbody th:first-child,
+.rekap-table tbody td:first-child {
+    text-align:left; color:#fff; font-weight:500;
+    min-width:200px;
+}
+.rekap-table tbody td.num {
+    text-align:center; font-variant-numeric:tabular-nums;
+    color:#d7efff; font-weight:600; white-space:nowrap;
+}
+.rekap-table tbody td.num.empty { color:rgba(255,255,255,.25); font-weight:400; }
+.rekap-table tbody tr:nth-child(even) td { background:rgba(255,255,255,.025); }
+.rekap-table tbody tr:hover td { background:rgba(0,212,255,.06); }
 
 @media (max-width:768px) {
     .faskes-window { width:100%; }

@@ -105,6 +105,20 @@ if (mysqli_num_rows($checkPortal) > 0) {
     $dataPortal = mysqli_fetch_assoc($qPortal) ?? [];
 }
 
+// Ringkasan Rekap Fasyankes 2021–2025 (guarded: tabel belum ada bila migration Tahap 1 belum dijalankan)
+$rekapPerTahun = [];
+$rekapJenis = 0;
+$checkRekap = mysqli_query($config, "SHOW TABLES LIKE 'tbl_faskes_rekap'");
+if (mysqli_num_rows($checkRekap) > 0) {
+    $qRekap = mysqli_query($config, "SELECT tahun, COUNT(*) c, COUNT(DISTINCT jenis_sarana) j FROM tbl_faskes_rekap WHERE aktif='Y' GROUP BY tahun ORDER BY tahun");
+    if ($qRekap) {
+        while ($r = mysqli_fetch_assoc($qRekap)) {
+            $rekapPerTahun[(int)$r['tahun']] = ['baris' => (int)$r['c'], 'jenis' => (int)$r['j']];
+            $rekapJenis = max($rekapJenis, (int)$r['j']);
+        }
+    }
+}
+
 // Ringkasan SPM
 $spmCounts = [];
 $spmTotal = 0;
@@ -139,6 +153,20 @@ if (mysqli_num_rows($checkSpm) > 0) {
         }
         .admin-dashboard { max-width: 1400px; margin: 0 auto; padding: 28px 35px; min-height: 100vh; }
 
+        /* === TOKEN WARNA CARD (scope dashboard admin saja) === */
+        .admin-dashboard {
+            --admin-card-bg: rgba(255,255,255,0.05);
+            --admin-card-bg-hover: rgba(255,255,255,0.07);
+            --admin-card-border: rgba(255,255,255,0.08);
+            --admin-card-border-hover: rgba(0,212,255,0.25);
+            --admin-card-accent: #00d4ff;
+            --admin-card-accent-soft: rgba(0,212,255,0.08);
+            --admin-card-accent-border: rgba(0,212,255,0.15);
+            --admin-card-accent-text: #87e3ff;
+            --admin-card-text: #fff;
+            --admin-card-muted: rgba(255,255,255,0.45);
+        }
+
         .admin-header {
             display: flex; justify-content: space-between; align-items: center;
             padding: 18px 24px; background: rgba(255,255,255,0.05);
@@ -169,13 +197,13 @@ if (mysqli_num_rows($checkSpm) > 0) {
         }
 
         .card-editor {
-            position: relative; background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08); border-radius: 20px;
+            position: relative; background: var(--admin-card-bg);
+            border: 1px solid var(--admin-card-border); border-radius: 20px;
             padding: 25px; backdrop-filter: blur(18px); transition: .3s;
         }
         .card-editor:hover {
-            transform: translateY(-4px); background: rgba(255,255,255,0.07);
-            border-color: rgba(0,212,255,0.25); box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            transform: translateY(-4px); background: var(--admin-card-bg-hover);
+            border-color: var(--admin-card-border-hover); box-shadow: 0 15px 40px rgba(0,0,0,0.25);
         }
 
         .card-title {
@@ -184,14 +212,14 @@ if (mysqli_num_rows($checkSpm) > 0) {
         .card-title-left { display: flex; align-items: center; gap: 12px; }
         .card-title-left i {
             width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
-            border-radius: 12px; background: rgba(0,212,255,0.1); color: #00d4ff; font-size: 18px;
+            border-radius: 12px; background: var(--admin-card-accent-soft); color: var(--admin-card-accent); font-size: 18px;
         }
         .card-title h3 { margin: 0; font-size: 17px; color: #fff; }
         .card-title p { margin: 3px 0 0; font-size: 11px; color: rgba(255,255,255,0.4); }
 
         .badge {
-            padding: 5px 12px; border-radius: 20px; background: rgba(0,212,255,0.12);
-            color: #00d4ff; font-size: 10px; font-weight: 600; white-space: nowrap;
+            padding: 5px 12px; border-radius: 20px; background: var(--admin-card-accent-soft);
+            color: var(--admin-card-accent); font-size: 10px; font-weight: 600; white-space: nowrap;
         }
         .badge-warning { background: rgba(255,193,7,0.15); color: #ffc107; }
 
@@ -204,10 +232,42 @@ if (mysqli_num_rows($checkSpm) > 0) {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             width: 100%; padding: 10px 15px; border-radius: 10px;
             border: 1px solid rgba(0,212,255,0.2); background: rgba(0,212,255,0.1);
-            color: #00d4ff; text-decoration: none; font-size: 13px; font-weight: 600; transition: .3s;
+            color: var(--admin-card-accent); text-decoration: none; font-size: 13px; font-weight: 600; transition: .3s;
         }
         .btn-edit:hover { background: rgba(0,212,255,0.2); border-color: rgba(0,212,255,0.4); transform: translateY(-2px); }
         .btn-disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+
+        /* === ELEMEN DALAM CARD: satu sistem (cyan/teal, tanpa tema per-card) === */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-row.spaced { margin-bottom: 18px; }
+        .btn-row .btn-edit { flex: 1; min-width: 200px; width: auto; }
+
+        .mini-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 16px; }
+        .mini-stat {
+            background: var(--admin-card-accent-soft);
+            border: 1px solid var(--admin-card-accent-border);
+            border-radius: 14px; padding: 14px; text-align: center;
+        }
+        .mini-stat .mini-label { font-size: 11px; color: var(--admin-card-accent-text); letter-spacing: 0.5px; }
+        .mini-stat .mini-value { font-size: 22px; font-weight: 800; color: var(--admin-card-text); margin-top: 4px; }
+        .mini-stat .mini-sub { font-size: 10px; color: rgba(255,255,255,0.35); }
+
+        .chip-row {
+            margin-bottom: 12px; padding: 10px 12px;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px; display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .chip {
+            font-size: 11px; color: rgba(255,255,255,0.6);
+            background: var(--admin-card-accent-soft); border: 1px solid var(--admin-card-accent-border);
+            padding: 4px 8px; border-radius: 20px;
+        }
+        .chip b { color: var(--admin-card-text); }
+
+        .card-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .link-more { font-size: 12px; color: #72e8ff; text-decoration: none; }
+        .link-more i { font-size: 10px; }
+        .link-muted { font-size: 11px; color: rgba(255,255,255,0.3); text-decoration: none; }
 
         .admin-footer { margin-top: 30px; text-align: center; color: rgba(255,255,255,0.25); font-size: 12px; }
 
@@ -271,8 +331,35 @@ if (mysqli_num_rows($checkSpm) > 0) {
                 <a href="crud/fasyankes.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Fasyankes</a>
             </div>
 
+            <!-- 1b. REKAP FASYANKES 2021–2025 (agregat kabupaten, tabel terpisah) -->
+            <div class="card-editor">
+                <div class="card-title">
+                    <div class="card-title-left">
+                        <i class="fas fa-table"></i>
+                        <div>
+                            <h3>Rekap Fasyankes</h3>
+                            <p>Agregat kabupaten 2021–2025</p>
+                        </div>
+                    </div>
+                    <span class="badge"><?= $rekapJenis ?> jenis</span>
+                </div>
+                <table>
+                    <?php if (!empty($rekapPerTahun)): ?>
+                        <?php foreach ($rekapPerTahun as $th => $rc): ?>
+                        <tr>
+                            <td><?= $th ?></td>
+                            <td><?= number_format($rc['jenis']) ?> jenis / <?= number_format($rc['baris']) ?> baris</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data rekap</td></tr>
+                    <?php endif; ?>
+                </table>
+                <a href="crud/faskes_rekap.php" class="btn-edit"><i class="fas fa-pen"></i> Kelola Rekap</a>
+            </div>
+
             <!-- 2. SDM — DIRAPIKAN: ringkas per kategori, tombol langsung terlihat tanpa scroll -->
-            <div class="card-editor" style="background:linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,136,204,0.08));border:1px solid rgba(0,212,255,0.25);box-shadow:0 8px 32px rgba(0,212,255,0.12)">
+            <div class="card-editor">
                 <div class="card-title">
                     <div class="card-title-left">
                         <i class="fas fa-users"></i>
@@ -284,41 +371,42 @@ if (mysqli_num_rows($checkSpm) > 0) {
                     <span class="badge"><?= $sdmCount ?> jenis</span>
                 </div>
                 <!-- Satu tombol aksi ke halaman terpadu -->
-                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
-                    <a href="crud/sdmk.php" class="btn-edit" style="flex:1;min-width:200px;background:linear-gradient(135deg,#00d4ff,#0088cc);color:#fff;border-color:rgba(0,212,255,0.3)"><i class="fas fa-hospital-user"></i> Kelola SDMK →</a>
+                <div class="btn-row spaced">
+                    <a href="crud/sdmk.php" class="btn-edit"><i class="fas fa-hospital-user"></i> Kelola SDMK →</a>
                 </div>
                 <!-- Mini stat 4 angka, bukan list 27 -->
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px">
-                    <div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px;text-align:center">
-                        <div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px">Tenaga Kesehatan</div>
-                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Tenaga Kesehatan']) ?></div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (A)</div>
+                <div class="mini-grid">
+                    <div class="mini-stat">
+                        <div class="mini-label">Tenaga Kesehatan</div>
+                        <div class="mini-value"><?= number_format($sdmKategori['Tenaga Kesehatan']) ?></div>
+                        <div class="mini-sub">orang (A)</div>
                     </div>
-                    <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.15);border-radius:14px;padding:14px;text-align:center">
-                        <div style="font-size:11px;color:#ffd54f;letter-spacing:0.5px">Asisten Nakes</div>
-                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Asisten Tenaga Kesehatan']) ?></div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (B)</div>
+                    <div class="mini-stat">
+                        <div class="mini-label">Asisten Nakes</div>
+                        <div class="mini-value"><?= number_format($sdmKategori['Asisten Tenaga Kesehatan']) ?></div>
+                        <div class="mini-sub">orang (B)</div>
                     </div>
-                    <div style="background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.15);border-radius:14px;padding:14px;text-align:center">
-                        <div style="font-size:11px;color:#81c784;letter-spacing:0.5px">Tenaga Penunjang</div>
-                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmKategori['Tenaga Penunjang']) ?></div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (C)</div>
+                    <div class="mini-stat">
+                        <div class="mini-label">Tenaga Penunjang</div>
+                        <div class="mini-value"><?= number_format($sdmKategori['Tenaga Penunjang']) ?></div>
+                        <div class="mini-sub">orang (C)</div>
                     </div>
-                    <div style="background:linear-gradient(135deg, rgba(68,114,196,0.25), rgba(0,212,255,0.15));border:1px solid rgba(68,114,196,0.3);border-radius:14px;padding:14px;text-align:center">
-                        <div style="font-size:11px;color:#84e7ff;letter-spacing:0.5px">Grand Total</div>
-                        <div style="font-size:22px;font-weight:800;color:#fff;margin-top:4px"><?= number_format($sdmGrand) ?></div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.35)">orang (A+B+C)</div>
+                    <div class="mini-stat">
+                        <div class="mini-label">Grand Total</div>
+                        <div class="mini-value"><?= number_format($sdmGrand) ?></div>
+                        <div class="mini-sub">orang (A+B+C)</div>
                     </div>
                 </div>
                 <?php if(!empty($sdmPerJenisFaskes)): ?>
-                <div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;display:flex;gap:8px;flex-wrap:wrap">
+                <div class="chip-row">
                     <?php foreach($sdmPerJenisFaskes as $j=>$tot): ?>
-                    <span style="font-size:11px;color:rgba(255,255,255,0.6);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.12);padding:4px 8px;border-radius:20px"><?= htmlspecialchars($j) ?>: <b style="color:#fff"><?= number_format($tot) ?></b></span>
+                    <span class="chip"><?= htmlspecialchars($j) ?>: <b><?= number_format($tot) ?></b></span>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                    <a href="crud/sdmk.php?tab=items" style="font-size:12px;color:#72e8ff;text-decoration:none"><i class="fas fa-external-link-alt" style="font-size:10px"></i> Lihat rincian per jenis SDM →</a>
+                <div class="card-foot">
+                    <a href="crud/sdmk.php?tab=items" class="link-more"><i class="fas fa-external-link-alt"></i> Lihat rincian per jenis SDM →</a>
+                    <a href="crud/sdm.php" class="link-muted">SDM legacy</a>
                 </div>
             </div>
 
@@ -432,7 +520,7 @@ if (mysqli_num_rows($checkSpm) > 0) {
             </div>
 
             <!-- SPM -->
-            <div class="card-editor" style="background:linear-gradient(135deg, rgba(3,169,244,0.14), rgba(0,212,255,0.06));border:1px solid rgba(3,169,244,0.3);">
+            <div class="card-editor">
                 <div class="card-title">
                     <div class="card-title-left">
                         <i class="fas fa-chart-pie"></i>
@@ -455,9 +543,9 @@ if (mysqli_num_rows($checkSpm) > 0) {
                         <tr><td colspan="2" style="text-align:center;color:rgba(255,255,255,0.35);">Belum ada data SPM</td></tr>
                     <?php endif; ?>
                 </table>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="btn-row">
                     <a href="crud/spm.php" class="btn-edit"><i class="fas fa-bullseye"></i> Kelola Target</a>
-                    <a href="crud/spm_realisasi.php" class="btn-edit" style="background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.25);color:#ffd966;"><i class="fas fa-chart-line"></i> Kelola Realisasi</a>
+                    <a href="crud/spm_realisasi.php" class="btn-edit"><i class="fas fa-chart-line"></i> Kelola Realisasi</a>
                 </div>
             </div>
 

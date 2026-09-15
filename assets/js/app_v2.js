@@ -220,24 +220,31 @@ const Clock = {
         }, 1000);
     },
     update: function() {
-        const el = DOM.id("clock");
-        if (!el) return;
         const now = new Date();
-        el.textContent = Util.pad(now.getHours()) + ":" + Util.pad(now.getMinutes()) + ":" + Util.pad(now.getSeconds());
+        const text = Util.pad(now.getHours()) + ":" + Util.pad(now.getMinutes()) + ":" + Util.pad(now.getSeconds());
+        const el = DOM.id("clock");
+        if (el) el.textContent = text;
+        // Cermin info jam di kanan header (bila blok header-datetime ada).
+        const hd = DOM.id("clockHeader");
+        if (hd) hd.textContent = text;
+        if (!el && !hd) return;
     }
 };
 
 const Tanggal = {
     update: function() {
-        const el = DOM.id("tanggalIndonesia") || DOM.id("tanggal");
-        if (!el) return;
         const now = new Date();
-        el.textContent = now.toLocaleDateString("id-ID", {
+        const text = now.toLocaleDateString("id-ID", {
             weekday: "long",
             day: "numeric",
             month: "long",
             year: "numeric"
         });
+        const el = DOM.id("tanggalIndonesia") || DOM.id("tanggal");
+        if (el) el.textContent = text;
+        // Cermin info tanggal di kanan header (bila blok header-datetime ada).
+        const hd = DOM.id("tanggalHeader");
+        if (hd) hd.textContent = text;
     },
     init: function() {
         this.update();
@@ -273,9 +280,32 @@ const Weather = {
             Weather.load();
         }, this.interval);
     },
+    // Label kondisi dari weathercode open-meteo (respons yang sama,
+    // tanpa request tambahan). Bukan hardcode — mengikuti API.
+    condLabel: function(code) {
+        const c = parseInt(code, 10);
+        if (isNaN(c)) return "-";
+        if (c === 0) return "Cerah";
+        if (c <= 2) return "Cerah Berawan";
+        if (c === 3) return "Berawan";
+        if (c === 45 || c === 48) return "Berkabut";
+        if ((c >= 51 && c <= 57) || (c >= 80 && c <= 82)) return "Hujan Ringan";
+        if ((c >= 61 && c <= 67) || (c >= 95 && c <= 99)) return "Hujan";
+        if (c >= 71 && c <= 77) return "Hujan Salju";
+        return "Berawan";
+    },
     load: function() {
         const el = DOM.id("weather");
-        if (!el) return;
+        const hd = DOM.id("weatherHeader"); // cermin suhu di kanan header
+        const cond = DOM.id("weatherCond"); // label kondisi di panel header
+        const paint = function(html) {
+            if (el) el.innerHTML = html;
+            if (hd) hd.innerHTML = html;
+        };
+        const paintCond = function(text) {
+            if (cond) cond.textContent = text;
+        };
+        if (!el && !hd && !cond) return;
         fetch("https://api.open-meteo.com/v1/forecast?latitude=" + this.latitude + "&longitude=" + this.longitude + "&current_weather=true", {
             cache: "no-store"
         })
@@ -284,13 +314,16 @@ const Weather = {
         })
         .then(function(json) {
             if (!json.current_weather) {
-                el.innerHTML = "-";
+                paint("-");
+                paintCond("-");
                 return;
             }
-            el.innerHTML = Math.round(json.current_weather.temperature) + "&deg;C";
+            paint(Math.round(json.current_weather.temperature) + "&deg;C");
+            paintCond(Weather.condLabel(json.current_weather.weathercode));
         })
         .catch(function() {
-            el.innerHTML = "-";
+            paint("-");
+            paintCond("-");
         });
     }
 };
@@ -1784,7 +1817,11 @@ renderOrbit: function(items) {
         Log.warn("Tidak ada data penyakit untuk orbit");
         return;
     }
-    // Mapping icon dinamis per penyakit (fallback generic)
+    // Mapping icon dinamis per penyakit (fallback generic).
+    // Catatan: 'fa-stomach' TIDAK dipakai karena icon tersebut hanya
+    // tersedia di Font Awesome Pro, sedangkan Portal memuat FA Free
+    // 6.6.0 (cdn) sehingga glyph-nya blank. Gastritis memakai 'fa-pills'
+    // yang tersedia di Free set (terverifikasi di all.min.css 6.6.0).
     var iconMap = {
         'jantung': 'fa-heart-pulse',
         'hipertensi': 'fa-heart-pulse',
@@ -1792,7 +1829,7 @@ renderOrbit: function(items) {
         'covid': 'fa-virus-covid',
         'ispa': 'fa-lungs-virus',
         'diare': 'fa-droplet',
-        'gastritis': 'fa-stomach',
+        'gastritis': 'fa-pills',
         'tbc': 'fa-syringe',
         'diabetes': 'fa-bone',
         'asma': 'fa-lungs',
@@ -2078,35 +2115,55 @@ renderData: function(data) {
 
        this.lastData = d;
 
-    // STATE AGREGAT (scope kabupaten): jangan picu reload per-kecamatan
-    // (Penduduk P1 / Penyakit / SDM) — data kabupaten sudah dimuat sekali
-    // oleh PortalAPI.init + PendudukCard.refresh. Reload dengan
-    // nama="12 Kecamatan" justru akan merusak panel tersebut
-    // (get_penyakit_populer.php selalu status:true berisi angka 0).
+    // STATE AGREGAT (scope kabupaten): muat ulang panel yang memiliki
+    // mode kabupaten (Penyakit Top 10 + orbit, SDM) dari API existing
+    // tanpa parameter kecamatan, agar kembali ke angka kabupaten setelah
+    // sebelumnya menampilkan data kecamatan (toggle kembali). Tanpa ini
+    // panel penyakit/SDM tertinggal menampilkan data kecamatan terakhir
+    // (bisa 0 semua bila kecamatan tersebut belum punya data).
     var isKabupaten = (data && data.scope === "kabupaten");
+
+    var namaKec = d.nama || d.nama_kecamatan;
+    // Label agregat ("12 Kecamatan") bukan kecamatan valid — jangan pernah
+    // dipakai sebagai parameter API (get_penyakit_populer.php selalu
+    // status:true berisi angka 0 untuk nama yang tidak cocok).
+    var isAgregatLabel = !!namaKec && (/^\d+\s+kecamatan$/i).test(namaKec);
 
     // ===== PENDUDUK RESMI P1: override Data Dasar (hanya Penduduk) =====
     // Item Data Dasar lain (desa/puskesmas/pustu/posyandu) tidak diubah.
     // Hanya untuk state kecamatan; agregat kabupaten sudah memakai
     // SUM(tbl_desa_kelurahan) langsung dari API sehingga tidak di-override.
-    var namaKecP1 = d.nama || d.nama_kecamatan;
-    if (!isKabupaten && namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
+    var namaKecP1 = namaKec;
+    if (!isKabupaten && !isAgregatLabel && namaKecP1 && typeof PendudukCard !== "undefined" && PendudukCard.refreshDistrict) {
         PendudukCard.refreshDistrict(namaKecP1);
     }
+    // Kembali ke agregat kabupaten (toggle klik kecamatan yang sama /
+    // resetToKabupaten): kembalikan card Penduduk panel kiri ke angka
+    // resmi P1 kabupaten. Guarded + cached (60 dtk) sehingga murah.
+    if (isKabupaten && typeof PendudukCard !== "undefined" && PendudukCard.refresh) {
+        PendudukCard.refresh();
+    }
 
-    // ===== PANGGIL PENYAKIT PER KECAMATAN =====
-    // Hanya untuk state kecamatan; state agregat memakai Top 10 + orbit
-    // kabupaten yang sudah dimuat PortalAPI.init.
-    var namaKec = d.nama || d.nama_kecamatan;
-    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
-        PortalAPI.loadPenyakit(namaKec);
+    // ===== PENYAKIT POPULER + ORBIT =====
+    // Kabupaten: reload agregat (Top 10 + orbit Top 6) via API existing.
+    // Kecamatan: reload per kecamatan.
+    if (typeof PortalAPI !== "undefined" && PortalAPI.loadPenyakit) {
+        if (isKabupaten) {
+            PortalAPI.loadPenyakit();
+        } else if (namaKec && !isAgregatLabel) {
+            PortalAPI.loadPenyakit(namaKec);
+        }
     }
 
     // ===== SDM KESEHATAN =====
-    // Hanya untuk state kecamatan; state agregat memakai total kabupaten
-    // yang sudah dimuat PortalAPI.init.
-    if (!isKabupaten && namaKec && typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
-        PortalAPI.loadSdm(namaKec);
+    // Kabupaten: reload total kabupaten via API existing.
+    // Kecamatan: reload per kecamatan.
+    if (typeof PortalAPI !== "undefined" && PortalAPI.loadSdm) {
+        if (isKabupaten) {
+            PortalAPI.loadSdm();
+        } else if (namaKec && !isAgregatLabel) {
+            PortalAPI.loadSdm(namaKec);
+        }
     }
 },
     showLoading: function() {
@@ -2323,6 +2380,21 @@ const FasyankesModal = {
             });
         }
 
+        // VIEW REKAP 2021–2025 (agregat kabupaten, dalam modal yang sama).
+        const rekapLink = DOM.id("fasyankesRekapLink");
+        if (rekapLink) {
+            rekapLink.addEventListener("click", function(e) {
+                e.preventDefault();
+                FasyankesModal.openRekap();
+            });
+        }
+        const rekapBack = DOM.id("fasyankesRekapBack");
+        if (rekapBack) {
+            rekapBack.addEventListener("click", function() {
+                FasyankesModal.backToList();
+            });
+        }
+
         const modal = DOM.id("fasyankesModal");
         if (modal) {
             modal.addEventListener("click", function(e) {
@@ -2368,6 +2440,9 @@ const FasyankesModal = {
 
         modal.classList.add("show");
 
+        // Selalu mulai dari view daftar 2026 (state rekap tidak terbawa).
+        this.showView("list");
+
         const card = DOM.id("appFasyankes");
         if (card) {
             card.classList.add("active");
@@ -2407,6 +2482,117 @@ const FasyankesModal = {
         if (el) {
             el.textContent = text;
         }
+    },
+
+    /* ==========================================================
+       REKAP 2021–2025 (agregat KABUPATEN, dalam modal yang sama).
+       Daftar 2026 tidak di-fetch ulang saat kembali (allItems
+       masih di memori, kecamatan & currentDistrict tidak diubah).
+    ========================================================== */
+
+    rekapYears: [2021, 2022, 2023, 2024, 2025],
+    rekapReqId: 0,
+
+    showView: function(name) {
+        const list = DOM.id("fasyankesViewList");
+        const rekap = DOM.id("fasyankesViewRekap");
+        if (!list || !rekap) return;
+        if (name === "rekap") {
+            list.hidden = true;
+            rekap.hidden = false;
+        } else {
+            rekap.hidden = true;
+            list.hidden = false;
+        }
+    },
+
+    openRekap: function() {
+        this.showView("rekap");
+        this.loadRekap();
+    },
+
+    backToList: function() {
+        this.showView("list");
+    },
+
+    loadRekap: function() {
+        const box = DOM.id("faskesRekapContent");
+        const myReq = ++this.rekapReqId;
+        if (box) {
+            box.innerHTML =
+                '<div class="faskes-empty">' +
+                '<i class="fas fa-spinner fa-spin"></i>' +
+                "<p>Memuat data rekap...</p>" +
+                "</div>";
+        }
+        PortalAPI.fetchJSON("api/get_faskes_rekap.php?ts=" + Date.now())
+            .then(function(json) {
+                // Guard: abaikan bila modal sudah ditutup, user sudah
+                // kembali ke daftar, atau ada request rekap yang lebih baru.
+                const modal = DOM.id("fasyankesModal");
+                if (!modal || !modal.classList.contains("show")) return;
+                const rekapView = DOM.id("fasyankesViewRekap");
+                if (!rekapView || rekapView.hidden) return;
+                if (myReq !== FasyankesModal.rekapReqId) return;
+                FasyankesModal.renderRekap(json);
+            })
+            .catch(function(err) {
+                Log.error("Gagal load rekap fasyankes:", err);
+                const modal = DOM.id("fasyankesModal");
+                if (!modal || !modal.classList.contains("show")) return;
+                FasyankesModal.renderRekap({ status: false });
+            });
+    },
+
+    renderRekap: function(json) {
+        const box = DOM.id("faskesRekapContent");
+        if (!box) return;
+        if (!json || json.status === false) {
+            box.innerHTML =
+                '<div class="faskes-empty">' +
+                '<i class="fas fa-triangle-exclamation"></i>' +
+                "<p>Gagal memuat data rekap.</p>" +
+                "</div>";
+            return;
+        }
+        const years = this.rekapYears;
+        // Matriks: jenis_sarana -> {tahun: jumlah}. NULL = tidak ada data.
+        const mat = {};
+        (json.data || []).forEach(function(yr) {
+            (yr.items || []).forEach(function(it) {
+                const nama = it.jenis_sarana;
+                if (!nama) return;
+                if (!mat[nama]) mat[nama] = {};
+                mat[nama][yr.tahun] = it.jumlah;
+            });
+        });
+        const names = Object.keys(mat).sort(function(a, b) {
+            return a.localeCompare(b, "id");
+        });
+        if (names.length === 0) {
+            box.innerHTML =
+                '<div class="faskes-empty">' +
+                '<i class="fas fa-table"></i>' +
+                "<p>Data rekap 2021–2025 belum tersedia.</p>" +
+                "</div>";
+            return;
+        }
+        let html = '<table class="rekap-table"><thead><tr><th>Sarana Pelayanan Kesehatan</th>';
+        years.forEach(function(t) { html += "<th>" + t + "</th>"; });
+        html += "</tr></thead><tbody>";
+        names.forEach(function(nama) {
+            html += "<tr><td>" + FasyankesModal.escapeHtml(nama) + "</td>";
+            years.forEach(function(t) {
+                const v = mat[nama][t];
+                // NULL/tidak ada -> "—"; jumlah 0 asli -> "0" (format id-ID).
+                html += (v === undefined || v === null)
+                    ? '<td class="num empty">—</td>'
+                    : '<td class="num">' + Util.number(v) + "</td>";
+            });
+            html += "</tr>";
+        });
+        html += "</tbody></table>";
+        box.innerHTML = html;
     },
 
     showLoading: function() {
@@ -3061,6 +3247,10 @@ const PendudukCard = {
         if (!el) return;
         this.getData()
             .then(function(json){
+                // Stale-guard: agregat kabupaten hanya berlaku bila TIDAK
+                // ada kecamatan aktif (klik cepat kecamatan lalu fetch
+                // lambat tidak boleh menimpa card kecamatan).
+                if (typeof Dashboard !== "undefined" && Dashboard.currentDistrict) return;
                 if (json.data.kabupaten.jumlah_penduduk) {
                     Counter.start("statPenduduk", json.data.kabupaten.jumlah_penduduk);
                 }
@@ -3078,6 +3268,9 @@ const PendudukCard = {
                 const hit = PendudukCard.findKec(json, want);
                 if (hit && typeof Dashboard !== "undefined") {
                     Dashboard.setNumber("jumlahPenduduk", hit.jumlah_penduduk);
+                    // Sinkron card Penduduk panel kiri (statPenduduk) dengan
+                    // kecamatan terpilih — sumber resmi P1 yang sama.
+                    Counter.start("statPenduduk", hit.jumlah_penduduk);
                 }
             })
             .catch(function(){ /* biarkan nilai lama dari api/kecamatan.php */ });
@@ -3157,6 +3350,25 @@ const PendudukModal = {
         this.kecId = 0;
         this.reqId++;
         this.showLoading();
+        // Kembalikan seluruh Portal ke agregat kabupaten memakai mekanisme
+        // existing (tanpa location.reload): bersihkan highlight/tooltip peta
+        // lalu muat ulang via Dashboard.resetToKabupaten() — Data Dasar,
+        // 10 Penyakit Populer, orbit, SDM, dan Penduduk ikut kembali ke
+        // angka kabupaten melalui alur renderData(scope=kabupaten).
+        if (typeof MapEngine !== "undefined") {
+            MapEngine.current = null;
+            MapEngine.pinned = false;
+            if (MapEngine.tooltip) {
+                clearTimeout(MapEngine.tooltip.timer);
+                MapEngine.tooltip.style.opacity = "0";
+            }
+            if (MapEngine.clearHighlight) {
+                MapEngine.clearHighlight();
+            }
+        }
+        if (typeof Dashboard !== "undefined" && Dashboard.resetToKabupaten) {
+            Dashboard.resetToKabupaten();
+        }
         this.load();
     },
 
@@ -3179,7 +3391,7 @@ const PendudukModal = {
             + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.laki_laki || 0) + '</div></div>';
         html += '<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#87e3ff;letter-spacing:0.5px;">PEREMPUAN</div>'
             + '<div style="font-size:18px;font-weight:700;color:#fff;">' + Util.number(k.perempuan || 0) + '</div></div>';
-        html += '<div style="flex:1;min-width:140px;display:flex;align-items:center;"><button id="pendudukBackBtn" class="btn-icon" style="cursor:pointer;">← Kembali ke Kabupaten</button></div>';
+        html += '<div style="flex:1;min-width:140px;display:flex;align-items:center;"><button id="pendudukBackBtn" class="faskes-chip"><i class="fas fa-arrow-left"></i>Kembali ke Kabupaten</button></div>';
         sum.innerHTML = html;
         const backBtn = DOM.id("pendudukBackBtn");
         if (backBtn) backBtn.addEventListener("click", function(){ self.backToKab(); });
