@@ -472,8 +472,8 @@ $username = $_SESSION['admin_username'] ?? 'Admin';
         .rep-table td { padding:6px; border-bottom:1px solid rgba(255,255,255,0.06); }
 
         /* HEADER GRUP KATEGORI (pola sama seperti rekap SDMK per fasyankes) */
-        .kategori-row { background:#FFF2CC; color:#111; font-weight:800; letter-spacing:.3px; }
-        .kategori-row td { padding:11px 12px; border-bottom:1px solid rgba(0,0,0,.08); }
+        .kategori-row { background:#123B63; color:#fff; font-weight:800; letter-spacing:.3px; }
+        .kategori-row td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,.08); color:#fff; box-shadow:inset 4px 0 0 #00d4ff; }
         /* Ikon pena abu-abu untuk sel kosong (buka modal isi, pola sama dgn edit) */
         .btn-fill { border-color:rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.45); }
 

@@ -1425,12 +1425,12 @@ table.master-table tbody tr:hover{background:rgba(0,212,255,0.06)}
 #rekapTable td.input-cell input::-webkit-outer-spin-button,#rekapTable td.input-cell input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 #rekapTable td.input-cell input[type=number]{-moz-appearance:textfield}
 .jumlah-cell{font-weight:700;background:rgba(255,255,255,0.04);border-left:1px solid rgba(255,255,255,0.06)}
-.kategori-row{background:#FFF2CC;color:#111;font-weight:800;letter-spacing:.3px}
-.kategori-row td{padding:11px 12px;border-bottom:1px solid rgba(0,0,0,.08)}
+.kategori-row{background:#123B63;color:#fff;font-weight:800;letter-spacing:.3px}
+.kategori-row td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.08);color:#fff;box-shadow:inset 4px 0 0 #00d4ff}
 .total-row{background:#DDEBF7;color:#0b223c;font-weight:800}
-.total-row td{border-bottom:1px solid rgba(0,0,0,.08)}
+.total-row td{border-bottom:1px solid rgba(0,0,0,.08);color:#0b223c}
 .grand-row{background:linear-gradient(135deg,#3a5bc7,#4472C4);color:#fff;font-weight:800}
-.grand-row td{padding:12px 10px}
+.grand-row td{padding:12px 10px;color:#fff}
 .child-row td:nth-child(2){border-left:3px solid rgba(255,213,79,.35);background:rgba(255,213,79,.04)}
 .th-center{text-align:center}
 #editModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:999;justify-content:center;align-items:center}
